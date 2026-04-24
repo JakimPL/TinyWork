@@ -5,7 +5,7 @@ PROJECT_NAME = example
 FRAMEWORK_DIR = ..
 
 # Source files
-MAIN_SRC = main.c
+# MAIN_SRC - Using framework default (../runtime/main.c)
 M32_SRC = demo.asm
 COM_SRC = main.asm
 

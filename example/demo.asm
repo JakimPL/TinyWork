@@ -1,15 +1,15 @@
 ; Minimal 32-bit assembly demo
-; Exports: draw(), image[]
+; Exports: frame(), image[]
 
     %include "../asm/fconsts.asm"
 
-    global draw
+    global frame
     global image
 
     section .text
 
 ; Simple demo: fill screen with gradient
-draw:
+frame:
     pusha
 
     xor eax, eax

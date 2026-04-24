@@ -51,12 +51,8 @@ else
 endif
 
 # Directories (relative to project root)
-ifeq ($(strip $(BIN_DIR)),)
-BIN_DIR = bin
-endif
-ifeq ($(strip $(BUILD_DIR)),)
-BUILD_DIR = build
-endif
+BIN_DIR := $(or $(strip $(BIN_DIR)),bin)
+BUILD_DIR := $(or $(strip $(BUILD_DIR)),build)
 VIDEO_DIR = $(FRAMEWORK_DIR)/video
 RUNTIME_DIR = $(FRAMEWORK_DIR)/runtime
 
@@ -72,7 +68,7 @@ COM_OUT = $(BIN_DIR)/$(PROJECT_NAME).com
 LST_OUT = $(PROJECT_NAME).lst
 
 # Default source files
-MAIN_SRC ?= main.c
+MAIN_SRC := $(or $(strip $(MAIN_SRC)),$(FRAMEWORK_DIR)/main.c)
 RUNTIME_SRC = $(RUNTIME_DIR)/runtime.c
 SDL_SRC = $(VIDEO_DIR)/video_sdl.c
 DOS_VIDEO_SRC = $(VIDEO_DIR)/video_dos.c

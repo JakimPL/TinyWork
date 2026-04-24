@@ -9,9 +9,15 @@
 #endif
 
 #ifndef __DJGPP__
-static void redraw_current_frame(void (*frame_fn)(void)) {
+static void render_frame(void) {
+    frame();
+    video_update_from_buffer(image);
+    video_present();
+}
+
+static void redraw_current_frame(void) {
     video_handle_resize();
-    frame_fn();
+    render_frame();
 }
 
 static int handle_escape_key(void) {
@@ -28,13 +34,13 @@ static void handle_fullscreen_toggle_key(SDL_Keycode key) {
     }
 }
 
-static void handle_window_event(SDL_WindowEvent *window_event, void (*frame_fn)(void)) {
+static void handle_window_event(SDL_WindowEvent *window_event) {
     if (window_event->event == SDL_WINDOWEVENT_SIZE_CHANGED || window_event->event == SDL_WINDOWEVENT_EXPOSED) {
-        redraw_current_frame(frame_fn);
+        redraw_current_frame();
     }
 }
 
-static int process_event(SDL_Event *event, void (*frame_fn)(void)) {
+static int process_event(SDL_Event *event) {
     if (event->type == SDL_QUIT) {
         return 0;
     }
@@ -45,20 +51,20 @@ static int process_event(SDL_Event *event, void (*frame_fn)(void)) {
         handle_fullscreen_toggle_key(event->key.keysym.sym);
     }
     if (event->type == SDL_WINDOWEVENT) {
-        handle_window_event(&event->window, frame_fn);
+        handle_window_event(&event->window);
     }
     return 1;
 }
 #endif
 
-void run(void (*frame_fn)(void)) {
+void run(void) {
 #ifdef __DJGPP__
     uclock_t frame_start, frame_time;
     const uclock_t frame_delay = UCLOCKS_PER_SEC / 60;
 
     while (!kbhit()) {
         frame_start = uclock();
-        frame_fn();
+        frame();
         frame_time = uclock() - frame_start;
         if (frame_time < frame_delay) {
             uclock_t delay_end = uclock() + (frame_delay - frame_time);
@@ -74,10 +80,10 @@ void run(void (*frame_fn)(void)) {
 
     while (running) {
         while (SDL_PollEvent(&event)) {
-            running = process_event(&event, frame_fn);
+            running = process_event(&event);
         }
 
-        frame_fn();
+        render_frame();
         SDL_Delay(16);
     }
 #endif
