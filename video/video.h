@@ -8,7 +8,6 @@
 #define SDL_SCALER 4
 #define BUFFER_SIZE 65536
 
-extern short color;
 extern unsigned char image[BUFFER_SIZE];
 extern void draw();
 #endif
