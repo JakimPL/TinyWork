@@ -1,11 +1,11 @@
     global set_palette
 
     %ifdef DOS
-    %macro PALETTE_OUT 1
+    %macro PALETTE_OUT 0
     out dx, al
     %endmacro
     %else
-    %macro PALETTE_OUT 1
+    %macro PALETTE_OUT 0
     mov [palette_data + edi], al
     inc edi
     %endmacro
@@ -21,6 +21,7 @@ set_palette:
     %ifndef COM
     pusha
     xor bx, bx
+    xor cx, cx
     mov dx, PALETTE_INDEX_PORT
     int BIOS_VIDEO_INTERRUPT
     %endif

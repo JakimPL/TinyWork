@@ -2,25 +2,22 @@
 
     %ifdef COM
     %define REG(x) x
-    %define MEM(offset) [es:offset]
     %else
     %define REG(x) e%+x
-    %define MEM(offset) [image + offset]
     %endif
-
-    xor REG(cx), REG(cx)
-    xor REG(di), REG(di)
-
-.draw_loop:
-    mov al, cl
 
     %ifdef COM
-    stosb
+    xor di, di
     %else
-    mov [image + edi], al
-    inc edi
+    mov edi, image
     %endif
 
-    inc REG(cx)
-    cmp REG(cx), BUFFER_SIZE
-    jl .draw_loop
+    mov bx, SCREEN_HEIGHT
+    mov cx, SCREEN_WIDTH
+.draw_loop:
+    mov ax, bx
+    shr ax, 1
+    rep stosb
+    add di, cx
+    dec bx
+    jnz .draw_loop
