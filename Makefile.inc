@@ -70,6 +70,7 @@ LST_OUT = $(PROJECT_NAME).lst
 # Default source files
 MAIN_SRC := $(or $(strip $(MAIN_SRC)),$(FRAMEWORK_DIR)/main.c)
 COM_SRC := $(or $(strip $(COM_SRC)),$(FRAMEWORK_DIR)/main.asm)
+M32_SRC := $(FRAMEWORK_DIR)/asm/m32.asm
 RUNTIME_SRC = $(RUNTIME_DIR)/runtime.c
 SDL_SRC = $(VIDEO_DIR)/video_sdl.c
 DOS_VIDEO_SRC = $(VIDEO_DIR)/video_dos.c

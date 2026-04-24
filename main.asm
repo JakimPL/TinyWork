@@ -1,16 +1,13 @@
     org 0x0100
 
-    %include "framework/asm/fconsts.asm"
-    %include "core/dconsts.asm"
-
-    section .text
+    %include "framework/asm/consts.asm"
 start:
 .set_video_mode:
     mov al, VIDEO_MODE_13H
     int BIOS_VIDEO_INTERRUPT
 
 palette:
-    %include "core/palette.asm"
+    %include "framework/asm/palette.asm"
 
     section .text
 main_loop:
@@ -44,4 +41,4 @@ return_to_dos:
     ret
     %endif
 
-    %include "core/includes.asm"
+    %include "framework/asm/includes.asm"
