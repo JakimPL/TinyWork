@@ -10,7 +10,7 @@ frame:
     popa
     ret
 
-    %include "framework/asm/includes.asm"
+    %include "tiny/includes.asm"
 
     section .bss
 image:

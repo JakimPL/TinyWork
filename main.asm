@@ -1,13 +1,13 @@
     org 0x0100
 
-    %include "framework/asm/consts.asm"
+    %include "tiny/consts.asm"
 start:
 .set_video_mode:
     mov al, VIDEO_MODE_13H
     int BIOS_VIDEO_INTERRUPT
 
 palette:
-    %include "framework/asm/palette.asm"
+    %include "tiny/palette.asm"
 
     section .text
 main_loop:
@@ -24,7 +24,7 @@ vsync:
     jz .wait_start
     %endif
 
-    %include "framework/asm/frame.asm"
+    %include "tiny/frame.asm"
 
     section .text
 check_input:
@@ -39,4 +39,4 @@ return_to_dos:
     ret
     %endif
 
-    %include "framework/asm/includes.asm"
+    %include "tiny/includes.asm"
