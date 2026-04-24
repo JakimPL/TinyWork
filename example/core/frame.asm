@@ -1,23 +1,23 @@
 ; Simple gradient effect
 
-    %ifdef COM
-    %define REG(x) x
-    %else
-    %define REG(x) e%+x
-    %endif
-
+    section .text
+set_registers:
     %ifdef COM
     xor di, di
     %else
+    xor eax, eax
+    xor ebx, ebx
+    xor ecx, ecx
     mov edi, image
     %endif
 
+draw:
     mov bx, SCREEN_HEIGHT
-    mov cx, SCREEN_WIDTH
 .draw_loop:
+    mov cx, SCREEN_WIDTH
     mov ax, bx
     shr ax, 1
     rep stosb
-    add di, cx
     dec bx
     jnz .draw_loop
+.exit:
