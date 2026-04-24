@@ -2,7 +2,7 @@
 
 # Project name and structure (required)
 PROJECT_NAME = example
-FRAMEWORK_DIR = ..
+TINYWORK_DIR = ..
 
 # Source files
 MAIN_SRC = # using default: framework/main.c
@@ -17,10 +17,10 @@ EXTRA_INCLUDES =
 CFLAGS_EXTRA =
 ASMFLAGS_OPTIONS =
 
-include $(FRAMEWORK_DIR)/Makefile.inc
+include $(TINYWORK_DIR)/Makefile.inc
 
 # Project-specific targets
 .PHONY: hello
 hello:
 	@echo "This is the $(PROJECT_NAME) project!"
-	@echo "Using TinyWork framework from: $(FRAMEWORK_DIR)"
+	@echo "Using TinyWork framework from: $(TINYWORK_DIR)"

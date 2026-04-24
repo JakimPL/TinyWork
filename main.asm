@@ -24,9 +24,7 @@ vsync:
     jz .wait_start
     %endif
 
-    section .text
-frame:
-    %include "core/demo.asm"
+    %include "framework/asm/frame.asm"
 
     section .text
 check_input:

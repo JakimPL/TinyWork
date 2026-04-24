@@ -3,7 +3,7 @@
 
 # Required variables (must be set before including):
 #   PROJECT_NAME    - Name of your project (used for executable names)
-#   FRAMEWORK_DIR   - Path to this framework directory
+#   TINYWORK_DIR   - Path to this framework directory
 #
 # Optional variables (with defaults):
 #   MAIN_SRC        - Main C source (default: main.c)
@@ -17,8 +17,8 @@ ifndef PROJECT_NAME
 $(error PROJECT_NAME must be defined before including framework Makefile)
 endif
 
-ifndef FRAMEWORK_DIR
-$(error FRAMEWORK_DIR must be defined before including framework Makefile)
+ifndef TINYWORK_DIR
+$(error TINYWORK_DIR must be defined before including framework Makefile)
 endif
 
 # Detect platform
@@ -53,8 +53,8 @@ endif
 # Directories (relative to project root)
 BIN_DIR := $(or $(strip $(BIN_DIR)),bin)
 BUILD_DIR := $(or $(strip $(BUILD_DIR)),build)
-VIDEO_DIR = $(FRAMEWORK_DIR)/video
-RUNTIME_DIR = $(FRAMEWORK_DIR)/runtime
+VIDEO_DIR = $(TINYWORK_DIR)/video
+RUNTIME_DIR = $(TINYWORK_DIR)/runtime
 
 LINUX_BUILD = $(BUILD_DIR)/linux
 WINDOWS_BUILD = $(BUILD_DIR)/windows
@@ -68,9 +68,9 @@ COM_OUT = $(BIN_DIR)/$(PROJECT_NAME).com
 LST_OUT = $(PROJECT_NAME).lst
 
 # Default source files
-MAIN_SRC := $(or $(strip $(MAIN_SRC)),$(FRAMEWORK_DIR)/main.c)
-COM_SRC := $(or $(strip $(COM_SRC)),$(FRAMEWORK_DIR)/main.asm)
-M32_SRC := $(FRAMEWORK_DIR)/asm/m32.asm
+MAIN_SRC := $(or $(strip $(MAIN_SRC)),$(TINYWORK_DIR)/main.c)
+COM_SRC := $(or $(strip $(COM_SRC)),$(TINYWORK_DIR)/main.asm)
+M32_SRC := $(TINYWORK_DIR)/asm/m32.asm
 RUNTIME_SRC = $(RUNTIME_DIR)/runtime.c
 SDL_SRC = $(VIDEO_DIR)/video_sdl.c
 DOS_VIDEO_SRC = $(VIDEO_DIR)/video_dos.c
@@ -89,7 +89,7 @@ CC_DOS = i586-pc-msdosdjgpp-gcc
 ASM = nasm
 
 # Scripts
-SHOW_SIZES = $(FRAMEWORK_DIR)/scripts/show-sizes.sh
+SHOW_SIZES = $(TINYWORK_DIR)/scripts/show-sizes.sh
 
 # Check if DOS compiler is available
 DJGPP_AVAILABLE := $(shell command -v $(CC_DOS) 2>/dev/null)
@@ -129,7 +129,7 @@ ASMFLAGS_DOS = -f coff --prefix _ $(ASMFLAGS_DEBUG_DOS) $(ASMFLAGS_OPTIONS) -DDO
 ASMFLAGS_COM = -f bin $(ASMFLAGS_OPTIONS) -DDOS -DCOM
 
 # Libraries
-LDFLAGS_LINUX = -lSDL2 -lm
+LDFLAGS_LINUX = -lSDL2 -lm -Wl,-z,noexecstack -no-pie
 LDFLAGS_WINDOWS = -lmingw32 -lSDL2main -lSDL2 -lm -mwindows
 LDFLAGS_DOS = -lm
 
@@ -296,4 +296,4 @@ endif
 	@echo "  make DEBUG=1 all        - Build with debug symbols"
 	@echo ""
 	@echo "Project: $(PROJECT_NAME)"
-	@echo "Framework: $(FRAMEWORK_DIR)"
+	@echo "Framework: $(TINYWORK_DIR)"
