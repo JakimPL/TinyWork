@@ -450,6 +450,63 @@ include $(TINYWORK_DIR)/Makefile.inc
 
 The generated file is a standalone assembly source that can be assembled directly with NASM to produce the same COM binary as `make com`.
 
+## Advanced Configuration
+
+The framework provides optional Makefile variables for customizing build directories, source files, and compiler flags. Set these in your project's Makefile before including `Makefile.inc`.
+
+### Build Directories
+
+**`BIN_DIR`** — Output directory for executables (default: `bin`)
+
+**`BUILD_DIR`** — Directory for intermediate build artifacts (default: `build`)
+
+Example:
+
+```makefile
+PROJECT_NAME = demo
+TINYWORK_DIR = tinywork
+
+BIN_DIR = output
+BUILD_DIR = .build
+
+include $(TINYWORK_DIR)/Makefile.inc
+```
+
+### Source Files
+
+**`MAIN_SRC`** — Entry point for 32-bit builds (default: `tinywork/main.c`)
+
+**`COM_SRC`** — Entry point for COM builds (default: `tinywork/main.asm`)
+
+Override these when you need custom initialization logic or entry points:
+
+```makefile
+MAIN_SRC = src/custom_main.c
+COM_SRC = src/custom_com.asm
+
+include $(TINYWORK_DIR)/Makefile.inc
+```
+
+### Compiler Flags
+
+**`ASMFLAGS_OPTIONS`** — Custom NASM flags applied to all assembly targets
+
+**`CFLAGS_EXTRA`** — Additional C compiler flags for all 32-bit builds
+
+**`EXTRA_INCLUDES`** — Additional include directories for C compilation
+
+Example:
+
+```makefile
+ASMFLAGS_OPTIONS = -DUSE_CUSTOM_PALETTE -DENABLE_EFFECTS
+CFLAGS_EXTRA = -O3 -march=i686
+EXTRA_INCLUDES = -I../shared -I../libs
+
+include $(TINYWORK_DIR)/Makefile.inc
+```
+
+The framework automatically combines these with platform-specific flags. Assembly flags affect both COM and 32-bit assembly compilation.
+
 
 
 
