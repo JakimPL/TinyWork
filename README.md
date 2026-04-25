@@ -112,3 +112,48 @@ make run      # Build and run the executable for current platform
 make clean    # Remove all build artifacts
 make help     # Display all available targets
 ```
+
+## Framework Components
+
+### COM Entry Point (`main.asm`)
+
+The COM binary entry point handles the complete initialization and main loop for DOS. The structure follows a simple pattern:
+
+```asm
+org 0x0100
+
+%include "tiny/consts.asm"
+
+start:
+    ; Initialize graphical mode
+
+__set_palette:
+    %include "tiny/palette.asm"    ; Generate palette (calls core/palette.asm)
+
+main_loop:
+    ; Set video memory segment
+
+    %ifndef NO_VSYNC
+vsync:
+    ; Wait for vertical retrace (optional)
+    %endif
+
+__frame:
+    %include "tiny/frame.asm"      ; Main demo code (calls core/frame.asm)
+
+    %ifndef SKIP_CHECK_INPUT
+check_input:
+    ; Check for the keyboard input
+    jnz main_loop
+    %else
+continue:
+    jmp main_loop
+    %endif
+
+    %ifdef RETURN_TO_DOS
+return_to_dos:
+    ; Gracefully return to DOS (optional)
+    %endif
+```
+
+The framework includes your effect code at the marked points. VSYNC waiting is enabled by default to prevent tearing; disable it by defining `NO_VSYNC` in your constants if you need maximum speed. The `RETURN_TO_DOS` option cleanly restores text mode on exit—useful for development, but typically omitted in size-optimized final builds to save bytes.

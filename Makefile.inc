@@ -11,6 +11,11 @@
 #   COM_SRC         - COM binary source (default: not built)
 #   ASMFLAGS_OPTIONS - Custom assembly flags (default: empty)
 #   EXTRA_INCLUDES  - Additional include paths (default: empty)
+#
+# Framework assembly flags (can be overridden):
+#   NO_VSYNC        - Disable VSYNC waiting (default: 0)
+#   SKIP_CHECK_INPUT - Skip keyboard input check (infinite loop) (default: 0)
+#   RETURN_TO_DOS   - Enable clean DOS exit (default: 0)
 
 # Validate required variables
 ifndef PROJECT_NAME
@@ -118,6 +123,22 @@ endif
 ASMFLAGS_OPTIONS ?=
 CFLAGS_EXTRA ?=
 EXTRA_INCLUDES ?=
+
+# Framework assembly flags (can be overridden by user)
+# Set 1 to enable, 0 to disable (default: 0)
+NO_VSYNC ?= 0
+SKIP_CHECK_INPUT ?= 0
+RETURN_TO_DOS ?= 0
+
+ifeq ($(NO_VSYNC),1)
+    ASMFLAGS_OPTIONS += -DNO_VSYNC
+endif
+ifeq ($(SKIP_CHECK_INPUT),1)
+    ASMFLAGS_OPTIONS += -DSKIP_CHECK_INPUT
+endif
+ifeq ($(RETURN_TO_DOS),1)
+    ASMFLAGS_OPTIONS += -DRETURN_TO_DOS
+endif
 
 # Platform-specific flags
 CFLAGS_LINUX = $(CFLAGS_BASE) $(CFLAGS_DEBUG) $(CFLAGS_EXTRA) -I$(VIDEO_DIR) -I$(RUNTIME_DIR) $(EXTRA_INCLUDES) -m32
@@ -294,6 +315,11 @@ endif
 	@echo "  make DEBUG=1 linux      - Build Linux version with debug symbols"
 	@echo "  make DEBUG=1 windows    - Build Windows version with debug symbols"
 	@echo "  make DEBUG=1 all        - Build with debug symbols"
+	@echo ""
+	@echo "Framework flags:"
+	@echo "  make NO_VSYNC=1 com     - Disable VSYNC waiting (faster, may tear)"
+	@echo "  make SKIP_CHECK_INPUT=1 com - Skip keyboard check (infinite loop)"
+	@echo "  make RETURN_TO_DOS=1 com - Enable clean DOS exit (costs bytes)"
 	@echo ""
 	@echo "Project: $(PROJECT_NAME)"
 	@echo "Framework: $(TINYWORK_DIR)"

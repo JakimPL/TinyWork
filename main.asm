@@ -6,7 +6,7 @@ start:
     mov al, VIDEO_MODE_13H
     int BIOS_VIDEO_INTERRUPT
 
-palette:
+__set_palette:
     %include "tiny/palette.asm"
 
     section .text
@@ -24,13 +24,19 @@ vsync:
     jz .wait_start
     %endif
 
+__frame:
     %include "tiny/frame.asm"
 
     section .text
+    %ifndef SKIP_CHECK_INPUT
 check_input:
     in al, KEYBOARD_DATA_PORT
     dec ax
     jnz main_loop
+    %else
+continue:
+    jmp main_loop
+    %endif
 
     %ifdef RETURN_TO_DOS
 return_to_dos:

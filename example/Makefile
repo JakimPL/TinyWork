@@ -15,7 +15,15 @@ BUILD_DIR =
 # Custom flags (optional)
 EXTRA_INCLUDES =
 CFLAGS_EXTRA =
+
+# Project-specific assembly defines (e.g., -DMY_FLAG)
 ASMFLAGS_OPTIONS =
+
+# Framework flags are handled automatically
+# You can change some of the defaults to 1:
+# NO_VSYNC = 1
+# SKIP_CHECK_INPUT = 1
+# RETURN_TO_DOS = 1
 
 include $(TINYWORK_DIR)/Makefile.inc
 
