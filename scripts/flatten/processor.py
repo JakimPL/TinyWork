@@ -23,6 +23,10 @@ class ASMProcessor:
         parts = line.split()
         return parts[0] if parts else ""
 
+    def get_word(self, line: str, index: int, default: str = "") -> str:
+        parts = line.split()
+        return parts[index] if len(parts) > index else default
+
     def process_file(self, file_path: Path) -> List[str]:
         lines = file_path.read_text().splitlines()
         result = []
@@ -53,7 +57,7 @@ class ASMProcessor:
             case d if d.startswith(IFNDEF):
                 return self.handle_ifndef(stripped)
             case d if d.startswith(DEFINE):
-                return self.handle_define(stripped)
+                return self.handle_define(line)
             case d if d.startswith(ELSE):
                 return self.handle_else()
             case d if d.startswith(ENDIF):
@@ -75,15 +79,13 @@ class ASMProcessor:
         return self.process_file(full_path)
 
     def handle_ifdef(self, line: str) -> List[str]:
-        parts = line.split()
-        symbol = parts[1] if len(parts) > 1 else ""
+        symbol = self.get_word(line, 1)
         self.guards.enter_ifdef()
         self.state.push_block(Directive.IFDEF, symbol)
         return []
 
     def handle_ifndef(self, line: str) -> List[str]:
-        parts = line.split()
-        symbol = parts[1] if len(parts) > 1 else ""
+        symbol = self.get_word(line, 1)
 
         should_skip = self.guards.enter_ifndef(symbol)
         if should_skip:
@@ -93,8 +95,7 @@ class ASMProcessor:
         return []
 
     def handle_define(self, line: str) -> List[str]:
-        parts = line.split()
-        symbol = parts[1] if len(parts) > 1 else ""
+        symbol = self.get_word(line.strip(), 1)
 
         should_output = self.guards.process_define(symbol)
         if not should_output:
