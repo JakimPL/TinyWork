@@ -1,20 +1,20 @@
 #include "runtime.h"
+#include "../video/video.h"
 
 #ifdef __DJGPP__
 #include <conio.h>
 #include <time.h>
 #else
 #include <SDL2/SDL.h>
-#include "../video/video.h"
 #endif
 
-#ifndef __DJGPP__
 static void render_frame(void) {
     frame();
     video_update_from_buffer(image);
     video_present();
 }
 
+#ifndef __DJGPP__
 static void redraw_current_frame(void) {
     video_handle_resize();
     render_frame();
@@ -59,18 +59,15 @@ static int process_event(SDL_Event *event) {
 
 void run(void) {
 #ifdef __DJGPP__
-    uclock_t frame_start, frame_time;
     const uclock_t frame_delay = UCLOCKS_PER_SEC / 60;
+    uclock_t next_frame = uclock();
 
     while (!kbhit()) {
-        frame_start = uclock();
-        frame();
-        frame_time = uclock() - frame_start;
-        if (frame_time < frame_delay) {
-            uclock_t delay_end = uclock() + (frame_delay - frame_time);
-            while (uclock() < delay_end && !kbhit()) {
-                /* busy wait */
-            }
+        render_frame();
+
+        next_frame += frame_delay;
+        while (uclock() < next_frame && !kbhit()) {
+            /* busy wait */
         }
     }
     getch();

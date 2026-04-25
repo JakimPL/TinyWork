@@ -3,7 +3,6 @@
 #include <string.h>
 #include "video.h"
 
-extern void set_palette(void);
 extern unsigned char palette_data[768];
 
 static SDL_Window *window = NULL;

@@ -7,7 +7,6 @@
 
 #define VIDEO_MEMORY 0xA0000
 
-extern void set_palette(void);
 static unsigned char *vga_memory = NULL;
 
 static void set_graphics_mode(int mode) {
