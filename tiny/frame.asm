@@ -1,3 +1,6 @@
+    %ifndef FRAMEWORK_CONSTS_FRAME
+    %define FRAMEWORK_CONSTS_FRAME
+
     section .text
 frame:
     %ifndef COM
@@ -15,4 +18,6 @@ frame:
     section .bss
 image:
     resb BUFFER_SIZE
+    %endif
+
     %endif

@@ -1,6 +1,8 @@
 # TinyWork
 
-A cross-platform build system and runtime for size-coded demos and 256-byte productions. Supports DOS (COM), DOS (DJGPP), Windows (MinGW), and Linux.
+A cross-platform build system and runtime for size-coded demos and 256-byte productions. Supports DOS COM binaries and 32-bit executables for DOS (DJGPP), Windows (MinGW), and Linux.
+
+Windows and Linux builds use SDL2 for video output. The 32-bit DOS target requires the `CWSDPMI.EXE` extender.
 
 ## Overview
 
@@ -117,7 +119,7 @@ make help     # Display all available targets
 
 ### COM Entry Point (`main.asm`)
 
-The COM binary entry point handles the complete initialization and main loop for DOS. The structure follows a simple pattern:
+The COM binary entry point handles the complete initialization and main loop. This file is used exclusively for the COM target. The structure follows a simple pattern:
 
 ```asm
 org 0x0100
@@ -125,17 +127,21 @@ org 0x0100
 %include "tiny/consts.asm"
 
 start:
-    ; Initialize graphical mode
+    %ifndef SKIP_SET_VIDEO_MODE
+; Initialize graphical mode (optional)
+    %endif
 
 __set_palette:
     %include "tiny/palette.asm"    ; Generate palette (calls core/palette.asm)
 
 main_loop:
-    ; Set video memory segment
+    %ifndef SKIP_SET_VIDEO_MEMORY_SEGMENT
+; Set video memory segment (optional)
+    %endif
 
     %ifndef NO_VSYNC
 vsync:
-    ; Wait for vertical retrace (optional)
+; Wait for vertical retrace (optional)
     %endif
 
 __frame:
@@ -143,7 +149,7 @@ __frame:
 
     %ifndef SKIP_CHECK_INPUT
 check_input:
-    ; Check for the keyboard input
+; Check for the keyboard input
     jnz main_loop
     %else
 continue:
@@ -152,16 +158,160 @@ continue:
 
     %ifdef RETURN_TO_DOS
 return_to_dos:
-    ; Gracefully return to DOS (optional)
+; Gracefully return to DOS (optional)
     %endif
+
+    %include "tiny/includes.asm"   ; Include other source files
 ```
 
-The framework includes your effect code at the marked points. Three optional flags control the behavior:
+The framework includes your effect code at the marked points. Five optional flags control the behavior:
 
-**`NO_VSYNC`** — By default, the demo waits for vertical retrace to prevent screen tearing. Set `NO_VSYNC=1` when building to skip this wait and maximize frame rate at the cost of potential visual artifacts.
+**`SKIP_SET_VIDEO_MODE`** — The initialization sequence sets VGA mode 13h (320×200 256-color graphics mode) on startup. Set `SKIP_SET_VIDEO_MODE=1` to omit this if your demo handles video mode setup manually or assumes it's already configured.
+
+**`SKIP_SET_VIDEO_MEMORY_SEGMENT`** — By default, the demo sets the `es` segment register to `0xA000` (VGA video memory) before each frame. Set `SKIP_SET_VIDEO_MEMORY_SEGMENT=1` to skip this if your frame code doesn't use `es` for video memory access or sets it manually.
+
+**`NO_VSYNC`** — The demo uses VSYNC for vertical retrace to prevent screen tearing. Set `NO_VSYNC=1` when building to skip this wait and maximize frame rate at the cost of potential visual artifacts.
 
 **`SKIP_CHECK_INPUT`** — By default, the demo polls the keyboard each frame and exits when keyboard key is pressed. Set `SKIP_CHECK_INPUT=1` to remove this check and run in an infinite loop.
 
 **`RETURN_TO_DOS`** — When the demo exits, this flag determines whether to restore text mode before returning to DOS. Disabled by default to save bytes. Only meaningful when `SKIP_CHECK_INPUT=0`.
 
 These flags are passed on the command line (e.g., `NO_VSYNC=1 make com`) or set in your Makefile before including `Makefile.inc`.
+
+### Palette Generation (`tiny/palette.asm`)
+
+The palette generation wrapper sets up the necessary infrastructure and calls your `core/palette.asm` code to generate the 256-color VGA palette. For 32-bit targets (Linux, Windows, DOS executable), `set_palette` is exported as a callable function that the C runtime invokes during initialization.
+
+The framework defines a `PALETTE_OUT` macro that abstracts platform differences:
+
+```asm
+%ifdef DOS
+    %macro PALETTE_OUT 0
+    out dx, al          ; Output to VGA I/O port
+    %endmacro
+%else
+    %macro PALETTE_OUT 0
+    stosb               ; Write to palette buffer
+    %endmacro
+%endif
+```
+
+Your `core/palette.asm` should set up the loop and destination registers, then generate palette entries by calling `PALETTE_OUT` for each RGB component:
+
+```asm
+palette:
+    %ifdef DOS
+    mov dx, PALETTE_DATA_PORT    ; VGA palette data port
+    mov cx, 0x100                ; 256 colors
+    %else
+    mov edi, palette_data        ; Palette buffer
+    mov ecx, 0x100
+    %endif
+
+; Common palette code: grayscale
+.palette_loop:
+    mov al, bl
+    shr al, 2                    ; VGA uses 6-bit data per channel
+
+    PALETTE_OUT                  ; R
+    PALETTE_OUT                  ; G
+    PALETTE_OUT                  ; B
+
+    inc bx
+    loop .palette_loop
+```
+
+For 32-bit platforms, the framework treats `set_palette` as a function called by C routines. On DOS (both COM and 32-bit target), colors are written directly to VGA hardware. On SDL2 targets, the code populate the buffer that the video subsystem uses to configure SDL2's palette.
+
+Note that for COM builds, you can leave the palette generation empty to use the VGA hardware's default palette without any overhead. However, for SDL2 targets, the palette must be explicitly initialized as there is no default.
+
+### Frame Rendering (`tiny/frame.asm`)
+
+The frame rendering wrapper calls your `core/frame.asm` code once per iteration of the main loop. The framework handles the platform-specific differences between COM and 32-bit builds automatically.
+
+```asm
+    section .text
+frame:
+    %ifndef COM
+    pusha
+    %endif
+
+    %include "core/frame.asm"
+
+    %ifndef COM
+    popa
+    ret
+
+    %include "tiny/includes.asm"
+
+    %endif
+```
+
+For COM builds, your code is included inline within the main loop. You can write directly to VGA video memory through the `es` segment, which is set to `0xA000` before your code executes by default.
+
+For 32-bit builds, you write to an `image` buffer defined in the `.bss` section. The C runtime calls this function each frame and transfers the buffer contents to the display.
+
+Your `core/frame.asm` contains the actual rendering algorithm. The framework defines platform conditionals (`COM`, `DOS`) that you use to handle register and memory access differences:
+
+```asm
+; Example from tinywork/example/core/frame.asm
+set_registers:
+    %ifdef COM
+    xor di, di                    ; 16-bit: write to es:di (VGA memory)
+    %else
+    mov edi, image                ; 32-bit: write to buffer
+    %endif
+
+; Common demo code
+draw:
+    mov bx, SCREEN_HEIGHT
+.draw_loop:
+    mov cx, SCREEN_WIDTH
+    mov ax, bx
+    shr ax, 1
+    rep stosb                     ; Works on both platforms
+    dec bx
+    jnz .draw_loop
+```
+
+The framework preserves all registers across the function call on 32-bit targets.
+
+Note that for 32-bit builds, the wrapper includes `tiny/includes.asm` after the frame function definition. This mechanism allows you to add additional code beyond the frame rendering. See the next section for details.
+
+### Additional Code (`core/includes.asm`)
+
+The `core/includes.asm` file lets you include additional assembly files that your effect needs beyond the main frame and palette code. Use `%include` directives to bring in helper files with functions, data sections, or variable declarations.
+
+The framework includes this file through `tiny/includes.asm`:
+
+```asm
+%include "tiny/consts.asm"
+%include "core/includes.asm"
+```
+
+Example usage in `core/includes.asm`:
+
+```asm
+%include "core/data.asm"       ; Data sections
+%include "core/vars.asm"       ; Variable declarations
+```
+
+For COM builds, `tiny/includes.asm` is included at the end of `main.asm`. For 32-bit builds, it's included within `tiny/frame.asm` after the frame function definition, making part of the frame compilation unit. That means that **included source files are bound to `frame.asm`**.
+
+### Project Metadata (`core/info.asm`)
+
+The `core/info.asm` file is not used during compilation. Instead, it's prepended to the final flattened assembly code generated by `make code`. Use this file to document your project with comments containing the title, author information, maybe some implementation details if you wish, or even ASCII art.
+
+Example:
+
+```asm
+; =================
+; My Glamorous Demo
+;     by X / Y
+; =================
+```
+
+This file should contain only comments. Any executable code or directives will appear at the top of the flattened output but won't affect the binaries compiled through `make com`.
+
+
+

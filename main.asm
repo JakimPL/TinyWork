@@ -2,18 +2,22 @@
 
     %include "tiny/consts.asm"
 start:
+    %ifndef SKIP_SET_VIDEO_MODE
 .set_video_mode:
     mov al, VIDEO_MODE_13H
     int BIOS_VIDEO_INTERRUPT
+    %endif
 
 __set_palette:
     %include "tiny/palette.asm"
 
     section .text
 main_loop:
+    %ifndef SKIP_SET_VIDEO_MEMORY_SEGMENT
 .push_video_memory_segment:
     push VIDEO_MEMORY_SEGMENT
     pop es
+    %endif
 
     %ifndef NO_VSYNC
 vsync:

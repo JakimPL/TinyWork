@@ -21,6 +21,8 @@ ASMFLAGS_OPTIONS =
 
 # Framework flags are handled automatically
 # You can change some of the defaults to 1:
+# SKIP_SET_VIDEO_MODE = 1
+# SKIP_SET_VIDEO_MEMORY_SEGMENT = 1
 # NO_VSYNC = 1
 # SKIP_CHECK_INPUT = 1
 # RETURN_TO_DOS = 1

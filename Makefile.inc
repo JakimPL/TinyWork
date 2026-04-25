@@ -12,10 +12,12 @@
 #   ASMFLAGS_OPTIONS - Custom assembly flags (default: empty)
 #   EXTRA_INCLUDES  - Additional include paths (default: empty)
 #
-# Framework assembly flags (can be overridden):
-#   NO_VSYNC        - Disable VSYNC waiting (default: 0)
-#   SKIP_CHECK_INPUT - Skip keyboard input check (infinite loop) (default: 0)
-#   RETURN_TO_DOS   - Enable clean DOS exit (default: 0)
+# Framework assembly flags (0 by default, can be overridden):
+#   SKIP_SET_VIDEO_MODE           - Skip setting video mode
+#   SKIP_SET_VIDEO_MEMORY_SEGMENT - Skip setting ES to video memory segment
+#   NO_VSYNC                      - Disable VSYNC waiting
+#   SKIP_CHECK_INPUT              - Skip keyboard input check (infinite loop)
+#   RETURN_TO_DOS                 - Enable clean DOS exit
 
 # Validate required variables
 ifndef PROJECT_NAME
@@ -126,10 +128,18 @@ EXTRA_INCLUDES ?=
 
 # Framework assembly flags (can be overridden by user)
 # Set 1 to enable, 0 to disable (default: 0)
+SKIP_SET_VIDEO_MODE ?= 0
+SKIP_SET_VIDEO_MEMORY_SEGMENT ?= 0
 NO_VSYNC ?= 0
 SKIP_CHECK_INPUT ?= 0
 RETURN_TO_DOS ?= 0
 
+ifeq ($(SKIP_SET_VIDEO_MODE),1)
+    ASMFLAGS_OPTIONS += -DSKIP_SET_VIDEO_MODE
+endif
+ifeq ($(SKIP_SET_VIDEO_MEMORY_SEGMENT),1)
+    ASMFLAGS_OPTIONS += -DSKIP_SET_VIDEO_MEMORY_SEGMENT
+endif
 ifeq ($(NO_VSYNC),1)
     ASMFLAGS_OPTIONS += -DNO_VSYNC
 endif
