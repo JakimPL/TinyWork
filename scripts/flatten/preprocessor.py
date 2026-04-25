@@ -1,6 +1,53 @@
-from typing import List
+from typing import List, Optional, Set
 
 from flatten.constants import Directive
+
+
+class GuardTracker:
+    def __init__(self) -> None:
+        self._seen_guards: Set[str] = set()
+        self._expecting_guard_define: Optional[str] = None
+        self._skip_depth = 0
+        self._current_depth = 0
+
+    def is_skipping(self) -> bool:
+        return self._skip_depth > 0
+
+    def enter_ifndef(self, symbol: str) -> bool:
+        self._current_depth += 1
+
+        if symbol in self._seen_guards:
+            self._skip_depth = self._current_depth
+            return True
+
+        self._expecting_guard_define = symbol
+        return False
+
+    def enter_ifdef(self) -> None:
+        self._current_depth += 1
+        self._expecting_guard_define = None
+
+    def exit_conditional(self) -> None:
+        if self._skip_depth == self._current_depth:
+            self._skip_depth = 0
+
+        self._current_depth -= 1
+        self._expecting_guard_define = None
+
+    def process_define(self, symbol: str) -> bool:
+        if symbol == self._expecting_guard_define:
+            self._seen_guards.add(symbol)
+            self._expecting_guard_define = None
+            return False
+
+        self._expecting_guard_define = None
+        return True
+
+    def handle_else(self) -> None:
+        self._expecting_guard_define = None
+
+    def break_guard_pattern(self) -> None:
+        self._expecting_guard_define = None
 
 
 class PreprocessorBlock:

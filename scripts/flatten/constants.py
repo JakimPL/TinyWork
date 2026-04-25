@@ -6,6 +6,7 @@ DEFAULT_MACROS_TO_INLINE: Final[Tuple[str, ...]] = ("PALETTE_OUT",)
 INCLUDE: Final[str] = "%include"
 IFDEF: Final[str] = "%ifdef"
 IFNDEF: Final[str] = "%ifndef"
+DEFINE: Final[str] = "%define"
 ELSE: Final[str] = "%else"
 ENDIF: Final[str] = "%endif"
 MACRO: Final[str] = "%macro"

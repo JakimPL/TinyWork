@@ -1,8 +1,8 @@
 from pathlib import Path
 from typing import List, Optional
 
-from flatten.constants import ELSE, ENDIF, IFDEF, IFNDEF, INCLUDE, Directive
-from flatten.preprocessor import PreprocessorState
+from flatten.constants import DEFINE, ELSE, ENDIF, IFDEF, IFNDEF, INCLUDE, Directive
+from flatten.preprocessor import GuardTracker, PreprocessorState
 
 
 class ASMProcessor:
@@ -10,6 +10,7 @@ class ASMProcessor:
         self.base_path = base_path
         self.framework_path = framework_path
         self.state = PreprocessorState()
+        self.guards = GuardTracker()
 
     def resolve_path(self, include_path: str) -> Path:
         if include_path.startswith("tiny/"):
@@ -37,6 +38,13 @@ class ASMProcessor:
         stripped = line.strip()
         directive = self.get_directive(stripped)
 
+        if self.guards.is_skipping():
+            if directive.startswith(IFNDEF) or directive.startswith(IFDEF):
+                self.guards.enter_ifdef()
+            elif directive.startswith(ENDIF):
+                self.guards.exit_conditional()
+            return []
+
         match directive:
             case d if d.startswith(INCLUDE):
                 return self.handle_include(stripped)
@@ -44,11 +52,14 @@ class ASMProcessor:
                 return self.handle_ifdef(stripped)
             case d if d.startswith(IFNDEF):
                 return self.handle_ifndef(stripped)
+            case d if d.startswith(DEFINE):
+                return self.handle_define(stripped)
             case d if d.startswith(ELSE):
                 return self.handle_else()
             case d if d.startswith(ENDIF):
                 return self.handle_endif()
             case _:
+                self.guards.break_guard_pattern()
                 return [line] if self.state.should_keep_line() else []
 
     def handle_include(self, line: str) -> List[str]:
@@ -66,19 +77,37 @@ class ASMProcessor:
     def handle_ifdef(self, line: str) -> List[str]:
         parts = line.split()
         symbol = parts[1] if len(parts) > 1 else ""
+        self.guards.enter_ifdef()
         self.state.push_block(Directive.IFDEF, symbol)
         return []
 
     def handle_ifndef(self, line: str) -> List[str]:
         parts = line.split()
         symbol = parts[1] if len(parts) > 1 else ""
+
+        should_skip = self.guards.enter_ifndef(symbol)
+        if should_skip:
+            return []
+
         self.state.push_block(Directive.IFNDEF, symbol)
         return []
 
+    def handle_define(self, line: str) -> List[str]:
+        parts = line.split()
+        symbol = parts[1] if len(parts) > 1 else ""
+
+        should_output = self.guards.process_define(symbol)
+        if not should_output:
+            return []
+
+        return [line] if self.state.should_keep_line() else []
+
     def handle_else(self) -> List[str]:
+        self.guards.handle_else()
         self.state.handle_else()
         return []
 
     def handle_endif(self) -> List[str]:
+        self.guards.exit_conditional()
         self.state.pop_block()
         return []
