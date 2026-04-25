@@ -402,6 +402,54 @@ The video subsystem abstracts platform differences in display and palette handli
 
 The key difference is that DOS writes directly to hardware while SDL2 uses intermediate buffers. The video subsystem is selected automatically based on the build target.
 
+## Code Generation
+
+The `make code` target generates a flattened assembly file from your project by resolving all `%include` directives, inlining macros, and removing framework-specific markers. This produces a single-file `.asm` suitable for final submission or sharing.
+
+```bash
+make code
+```
+
+The flattener processes `COM_SRC` (typically `tinywork/main.asm`) and outputs a complete assembly file containing all your effect code with framework infrastructure removed.
+
+### Processing Pipeline
+
+The code generator performs several transformations:
+
+**Include Resolution**: Recursively processes all `%include` directives, distinguishing between framework files (prefixed with `tiny/`) and project files. Both can be located anywhere in the filesystem. During this step, all 32-bit code is being removed, including target-specific preprocessor directives.
+
+**Include Guard Deduplication**: Detects `%ifndef`/`%define` guard patterns and skips duplicate guard blocks when files are included multiple times. Guard `%define` statements are removed from output.
+
+**Macro Inlining**: Expands specified macros inline, replacing invocations with their definitions.
+
+**Label Cleanup**: Removes double-underscore labels (`__initialize:`, `__frame:`) used as framework markers. Removes optional labels (`initialize:`, `set_palette:`) if they contain no code.
+
+**Output Formatting**: Strips `global` directives, removes redundant empty lines, and ensures consistent spacing.
+
+**Header Prepending**: Adds `core/info.asm` contents to the top of the output for project metadata and documentation.
+
+### Configuration
+
+Three Makefile variables control the code generation:
+
+**`FLATTENED_ASM`** — Output filename (default: `$(PROJECT_NAME).asm`)
+
+**`FLATTEN_MACROS`** — Space-separated macro names to inline (default: `PALETTE_OUT`)
+
+**`FLATTEN_OPTIONAL_LABELS`** — Space-separated labels to remove if empty (default: `initialize set_palette`)
+
+Example customization in your Makefile:
+
+```makefile
+FLATTENED_ASM = submission.asm
+FLATTEN_MACROS = PALETTE_OUT PIXEL_WRITE VSYNC_WAIT
+FLATTEN_OPTIONAL_LABELS = initialize set_palette cleanup
+
+include $(TINYWORK_DIR)/Makefile.inc
+```
+
+The generated file is a standalone assembly source that can be assembled directly with NASM to produce the same COM binary as `make com`.
+
 
 
 
