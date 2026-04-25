@@ -8,6 +8,9 @@ start:
     int BIOS_VIDEO_INTERRUPT
     %endif
 
+__initialize:
+    %include "tiny/init.asm"
+
 __set_palette:
     %include "tiny/palette.asm"
 

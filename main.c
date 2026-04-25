@@ -13,6 +13,7 @@ int main(int, char **) {
         return 1;
     }
 
+    initialize();
     run();
     video_cleanup();
     return 0;

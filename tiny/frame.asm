@@ -1,5 +1,5 @@
-    %ifndef FRAMEWORK_CONSTS_FRAME
-    %define FRAMEWORK_CONSTS_FRAME
+    %ifndef TINYWORK_FRAME
+    %define TINYWORK_FRAME
 
     section .text
 frame:

@@ -131,6 +131,9 @@ start:
 ; Initialize graphical mode (optional)
     %endif
 
+__initialize:
+    %include "tiny/init.asm"       ; Custom initialization (calls core/init.asm)
+
 __set_palette:
     %include "tiny/palette.asm"    ; Generate palette (calls core/palette.asm)
 
@@ -177,6 +180,31 @@ The framework includes your effect code at the marked points. Five optional flag
 **`RETURN_TO_DOS`** — When the demo exits, this flag determines whether to restore text mode before returning to DOS. Disabled by default to save bytes. Only meaningful when `SKIP_CHECK_INPUT=0`.
 
 These flags are passed on the command line (e.g., `NO_VSYNC=1 make com`) or set in your Makefile before including `Makefile.inc`.
+
+### Initialization (`tiny/init.asm`)
+
+The initialization wrapper allows you to execute custom setup code before the main loop begins. This code runs once after video mode setup but before palette generation, and works for both COM and 32-bit targets.
+
+The framework includes `core/init.asm` through the wrapper:
+
+```asm
+section .text
+initialize:
+    %ifndef COM
+    pusha
+    %endif
+
+    %include "core/init.asm"
+
+    %ifndef COM
+    popa
+    ret
+    %endif
+```
+
+For COM builds, your initialization code is included inline. For 32-bit builds, it's wrapped in an `initialize()` function with automatic register preservation.
+
+Use `core/init.asm` for one-time setup tasks such as calculating lookup tables, initializing variables, or preparing data structures. This file can be empty if no initialization is needed.
 
 ### Palette Generation (`tiny/palette.asm`)
 
