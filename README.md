@@ -341,5 +341,67 @@ Example:
 
 This file should contain only comments. Any executable code or directives will appear at the top of the flattened output but won't affect the binaries compiled through `make com`.
 
+## C Runtime
+
+For 32-bit builds (Linux, Windows, DOS executables), _TinyWork_ provides a C runtime with the entry point, main loop, input handling, and video subsystem. COM builds are pure assembly and don't use any C code.
+
+The runtime calls your assembly `initialize()` and `frame()` functions and handles platform-specific details like SDL2 on Linux/Windows or VGA on DOS.
+
+### Framework Structure
+
+The C runtime consists of three components:
+
+```
+tinywork/
+├── main.c              # Entry point for 32-bit builds
+├── runtime/
+│   ├── runtime.h       # Runtime interface
+│   └── runtime.c       # Main loop and input handling
+└── video/
+    ├── video.h         # Video subsystem interface
+    ├── video_sdl.c     # SDL2 implementation (Linux/Windows)
+    └── video_dos.c     # VGA implementation (DOS executable)
+```
+
+### Main Entry Point (`main.c`)
+
+The default entry point for 32-bit builds follows a simple initialization sequence:
+
+```c
+int main(int, char **) {
+    if (video_init() != 0) {
+        return 1;
+    }
+
+    initialize();
+    run();
+    video_cleanup();
+    return 0;
+}
+```
+
+This initializes the video subsystem, calls your assembly `initialize()` and `frame()` functions through `run()`, then cleans up on exit. Override this by setting `MAIN_SRC` in your Makefile if you need custom startup logic.
+
+### Runtime (`runtime/`)
+
+The runtime provides the `run()` function that implements the main loop and calls your `frame()` function repeatedly. The implementation differs between DOS (DJGPP) and SDL2 platforms:
+
+**DOS (DJGPP)**: Runs at 60 FPS with busy-wait timing, polls keyboard for exit, calls `frame()` which writes directly to VGA memory.
+
+**SDL2 (Linux/Windows)**: Processes SDL events (quit, keyboard, window resize), handles fullscreen toggling (F11/F key) and escape key behavior, calls `frame()` which renders to the `image` buffer that's then transferred to the window.
+
+The runtime expects your assembly code to provide `initialize()` (possibly empty) and `frame()` functions and an `image` buffer. These are defined in your assembly files through the framework's wrappers.
+
+### Video Subsystem (`video/`)
+
+The video subsystem abstracts platform differences in display and palette handling. Both implementations require your assembly code to provide `set_palette()` and the `image` buffer.
+
+**`video_sdl.c`** (Linux/Windows): Creates an SDL2 window, calls `set_palette()` to populate a palette buffer, converts indexed color from the `image` buffer to RGB for display.
+
+**`video_dos.c`** (DOS executable): Sets VGA mode 13h, calls `set_palette()` which writes to VGA palette registers, copies the `image` buffer to VGA memory each frame.
+
+The key difference is that DOS writes directly to hardware while SDL2 uses intermediate buffers. The video subsystem is selected automatically based on the build target.
+
+
 
 
