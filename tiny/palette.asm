@@ -6,8 +6,7 @@
     %endmacro
     %else
     %macro PALETTE_OUT 0
-    mov [palette_data + edi], al
-    inc edi
+    stosb
     %endmacro
 
     section .data
@@ -17,34 +16,26 @@
 
     section .text
 set_palette:
-    %ifdef DOS
     %ifndef COM
     pusha
+    %endif
+
+    %ifdef DOS
+    %ifndef COM
     xor bx, bx
     xor cx, cx
     mov dx, PALETTE_INDEX_PORT
     int BIOS_VIDEO_INTERRUPT
     %endif
-
-    mov dx, PALETTE_DATA_PORT
-    mov cl, 0xFF
     %else
-    push ebx
-    push edi
     xor ebx, ebx
-    xor edi, edi
-    mov ecx, 0x100
+    xor ecx, ecx
     %endif
 
     %include "core/palette.asm"
 
-    %ifdef DOS
+    section .text
     %ifndef COM
     popa
-    ret
-    %endif
-    %else
-    pop edi
-    pop ebx
     ret
     %endif

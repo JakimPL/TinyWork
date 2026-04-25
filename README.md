@@ -156,4 +156,12 @@ return_to_dos:
     %endif
 ```
 
-The framework includes your effect code at the marked points. VSYNC waiting is enabled by default to prevent tearing; disable it by defining `NO_VSYNC` in your constants if you need maximum speed. The `RETURN_TO_DOS` option cleanly restores text mode on exit—useful for development, but typically omitted in size-optimized final builds to save bytes.
+The framework includes your effect code at the marked points. Three optional flags control the behavior:
+
+**`NO_VSYNC`** — By default, the demo waits for vertical retrace to prevent screen tearing. Set `NO_VSYNC=1` when building to skip this wait and maximize frame rate at the cost of potential visual artifacts.
+
+**`SKIP_CHECK_INPUT`** — By default, the demo polls the keyboard each frame and exits when keyboard key is pressed. Set `SKIP_CHECK_INPUT=1` to remove this check and run in an infinite loop.
+
+**`RETURN_TO_DOS`** — When the demo exits, this flag determines whether to restore text mode before returning to DOS. Disabled by default to save bytes. Only meaningful when `SKIP_CHECK_INPUT=0`.
+
+These flags are passed on the command line (e.g., `NO_VSYNC=1 make com`) or set in your Makefile before including `Makefile.inc`.
