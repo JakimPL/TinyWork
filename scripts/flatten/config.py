@@ -10,6 +10,7 @@ class FlattenConfig:
     input_file: Path
     output_file: Path
     macros_to_inline: Tuple[str, ...]
+    optional_labels: Tuple[str, ...]
 
     @property
     def header_file(self) -> Path:

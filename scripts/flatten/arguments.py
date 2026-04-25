@@ -2,7 +2,7 @@ import argparse
 from pathlib import Path
 
 from flatten.config import FlattenConfig
-from flatten.constants import DEFAULT_MACROS_TO_INLINE
+from flatten.constants import DEFAULT_MACROS_TO_INLINE, DEFAULT_OPTIONAL_LABELS
 
 
 def parse_arguments() -> FlattenConfig:
@@ -39,6 +39,13 @@ def parse_arguments() -> FlattenConfig:
         default=DEFAULT_MACROS_TO_INLINE,
         help=f"Macro names to inline (default: {', '.join(DEFAULT_MACROS_TO_INLINE)})",
     )
+    parser.add_argument(
+        "--optional-labels",
+        type=str,
+        nargs="*",
+        default=DEFAULT_OPTIONAL_LABELS,
+        help=f"Labels to remove if empty (default: {', '.join(DEFAULT_OPTIONAL_LABELS)})",
+    )
 
     args = parser.parse_args()
 
@@ -48,4 +55,5 @@ def parse_arguments() -> FlattenConfig:
         input_file=args.input.resolve(),
         output_file=args.output.resolve(),
         macros_to_inline=tuple(args.inline_macros),
+        optional_labels=tuple(args.optional_labels),
     )

@@ -20,7 +20,7 @@ def main() -> None:
     reorganizer = ASMReorganizer()
     reorganized = reorganizer.reorganize(inlined)
 
-    formatter = OutputFormatter(reorganized)
+    formatter = OutputFormatter(reorganized, config.optional_labels)
     formatted = formatter.format()
 
     prepender = HeaderPrepender(config.header_file)

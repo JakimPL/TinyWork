@@ -2,6 +2,7 @@ from enum import Enum
 from typing import Final, Tuple
 
 DEFAULT_MACROS_TO_INLINE: Final[Tuple[str, ...]] = ("PALETTE_OUT",)
+DEFAULT_OPTIONAL_LABELS: Final[Tuple[str, ...]] = ("initialize", "set_palette")
 
 INCLUDE: Final[str] = "%include"
 IFDEF: Final[str] = "%ifdef"

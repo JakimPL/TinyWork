@@ -85,6 +85,7 @@ DOS_VIDEO_SRC = $(VIDEO_DIR)/video_dos.c
 
 # Flattening configuration
 FLATTEN_MACROS := $(or $(strip $(FLATTEN_MACROS)),PALETTE_OUT)
+FLATTEN_OPTIONAL_LABELS := $(or $(strip $(FLATTEN_OPTIONAL_LABELS)),initialize set_palette)
 
 # Object files (in build subdirectories)
 ifdef M32_SRC
@@ -266,7 +267,7 @@ com: $(COM_OUT)
 $(COM_OUT): $(COM_SRC) | $(BIN_DIR)
 	@echo "$(COLOR_YELLOW)==> Building COM file$(COLOR_RESET)"
 	$(ASM) $(ASMFLAGS_COM) $< -o $@ -l $(BIN_DIR)/$(LST_OUT)
-	@if [ -x "$(SHOW_SIZES)" ]
+	#@if [ -x "$(SHOW_SIZES)" ]
 	@echo "$(COLOR_GREEN)COM build complete: $(COM_OUT) ($$(stat -c%s $@ 2>/dev/null || stat -f%z $@) bytes)$(COLOR_RESET)"
 	@echo "$(COLOR_BOLD)Listing: $(BIN_DIR)/$(LST_OUT)$(COLOR_RESET)"
 	@echo
@@ -280,7 +281,7 @@ endif
 .PHONY: sizes
 sizes:
 ifdef COM_SRC
-	@if [ -x "$(SHOW_SIZES)" ]; then \
+	#@if [ -x "$(SHOW_SIZES)" ]; then \
 		$(SHOW_SIZES) $(BIN_DIR)/$(LST_OUT); \
 	else \
 		echo "show-sizes.sh script not found"; \
@@ -298,7 +299,8 @@ code:
 		--framework-directory $(TINYWORK_DIR) \
 		--input $(COM_SRC) \
 		--output $(FLATTENED_ASM) \
-		--inline-macros $(FLATTEN_MACROS)
+		--inline-macros $(FLATTEN_MACROS) \
+		--optional-labels $(FLATTEN_OPTIONAL_LABELS)
 	@echo
 
 # Run platform-specific build
