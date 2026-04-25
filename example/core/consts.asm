@@ -1,5 +1,5 @@
-    %ifndef CORE_CONSTS_ASM
-    %define CORE_CONSTS_ASM
+    %ifndef CORE_CONSTS
+    %define CORE_CONSTS
 
     section .data
 ; User-defined constants

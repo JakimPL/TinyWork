@@ -1,37 +1,33 @@
 #!/usr/bin/env python3
 
-from flatten.constants import (
-    BASE_PATH,
-    HEADER_FILE,
-    INPUT_FILE,
-    MACROS_TO_INLINE,
-    OUTPUT_FILE,
-)
+from flatten.arguments import parse_arguments
 from flatten.formatter import OutputFormatter
 from flatten.macro import MacroInliner
 from flatten.prepender import HeaderPrepender
-from flatten.processor import AsmProcessor
-from flatten.reorganizer import AsmReorganizer
+from flatten.processor import ASMProcessor
+from flatten.reorganizer import ASMReorganizer
 
 
 def main() -> None:
-    processor = AsmProcessor(BASE_PATH)
-    result = processor.process_file(INPUT_FILE)
+    config = parse_arguments()
 
-    inliner = MacroInliner(MACROS_TO_INLINE)
+    processor = ASMProcessor(config.project_directory, config.framework_directory)
+    result = processor.process_file(config.input_file)
+
+    inliner = MacroInliner(config.macros_to_inline)
     inlined = inliner.process_lines(result)
 
-    reorganizer = AsmReorganizer()
+    reorganizer = ASMReorganizer()
     reorganized = reorganizer.reorganize(inlined)
 
     formatter = OutputFormatter(reorganized)
     formatted = formatter.format()
 
-    prepender = HeaderPrepender(HEADER_FILE)
+    prepender = HeaderPrepender(config.header_file)
     final = prepender.prepend(formatted)
 
-    OUTPUT_FILE.write_text("\n".join(final) + "\n")
-    print(f"Generated {OUTPUT_FILE} ({len(final)} lines)")
+    config.output_file.write_text("\n".join(final) + "\n")
+    print(f"Generated {config.output_file} ({len(final)} lines)")
 
 
 if __name__ == "__main__":

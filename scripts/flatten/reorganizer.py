@@ -12,7 +12,7 @@ class CodeSection:
         self.rest: List[str] = []
 
 
-class AsmReorganizer:
+class ASMReorganizer:
     def __init__(self) -> None:
         self.section = CodeSection()
         self.in_macro = False

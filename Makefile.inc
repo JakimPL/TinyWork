@@ -73,6 +73,7 @@ WINDOWS_OUT = $(BIN_DIR)/$(PROJECT_NAME)-windows.exe
 DOS_OUT = $(BIN_DIR)/$(PROJECT_NAME).exe
 COM_OUT = $(BIN_DIR)/$(PROJECT_NAME).com
 LST_OUT = $(PROJECT_NAME).lst
+FLATTENED_ASM := $(or $(strip $(FLATTENED_ASM)),$(PROJECT_NAME).asm)
 
 # Default source files
 MAIN_SRC := $(or $(strip $(MAIN_SRC)),$(TINYWORK_DIR)/main.c)
@@ -81,6 +82,9 @@ M32_SRC := $(TINYWORK_DIR)/tiny/m32.asm
 RUNTIME_SRC = $(RUNTIME_DIR)/runtime.c
 SDL_SRC = $(VIDEO_DIR)/video_sdl.c
 DOS_VIDEO_SRC = $(VIDEO_DIR)/video_dos.c
+
+# Flattening configuration
+FLATTEN_MACROS := $(or $(strip $(FLATTEN_MACROS)),PALETTE_OUT)
 
 # Object files (in build subdirectories)
 ifdef M32_SRC
@@ -97,6 +101,7 @@ ASM = nasm
 
 # Scripts
 SHOW_SIZES = $(TINYWORK_DIR)/scripts/show-sizes.sh
+FLATTEN_ASM = $(TINYWORK_DIR)/scripts/flatten-asm.py
 
 # Check if DOS compiler is available
 DJGPP_AVAILABLE := $(shell command -v $(CC_DOS) 2>/dev/null)
@@ -261,7 +266,7 @@ com: $(COM_OUT)
 $(COM_OUT): $(COM_SRC) | $(BIN_DIR)
 	@echo "$(COLOR_YELLOW)==> Building COM file$(COLOR_RESET)"
 	$(ASM) $(ASMFLAGS_COM) $< -o $@ -l $(BIN_DIR)/$(LST_OUT)
-	@if [ -x "$(SHOW_SIZES)" ]; then $(SHOW_SIZES) $(BIN_DIR)/$(LST_OUT); fi
+	@if [ -x "$(SHOW_SIZES)" ]
 	@echo "$(COLOR_GREEN)COM build complete: $(COM_OUT) ($$(stat -c%s $@ 2>/dev/null || stat -f%z $@) bytes)$(COLOR_RESET)"
 	@echo "$(COLOR_BOLD)Listing: $(BIN_DIR)/$(LST_OUT)$(COLOR_RESET)"
 	@echo
@@ -283,6 +288,18 @@ ifdef COM_SRC
 else
 	@echo "$(COLOR_YELLOW)sizes target requires COM_SRC to be defined$(COLOR_RESET)"
 endif
+
+# Generate flattened assembly code
+.PHONY: code
+code:
+	@echo "$(COLOR_BOLD)Generating flattened assembly code...$(COLOR_RESET)"
+	@python3 $(FLATTEN_ASM) \
+		--project-directory . \
+		--framework-directory $(TINYWORK_DIR) \
+		--input $(COM_SRC) \
+		--output $(FLATTENED_ASM) \
+		--inline-macros $(FLATTEN_MACROS)
+	@echo
 
 # Run platform-specific build
 .PHONY: run
@@ -316,6 +333,7 @@ ifdef COM_SRC
 	@echo "  make com         - Assemble standalone .com file"
 	@echo "  make sizes       - Show instruction sizes from .lst file"
 endif
+	@echo "  make code        - Generate flattened assembly code"
 	@echo "  make run         - Build and run platform-specific executable"
 	@echo "  make clean       - Remove build artifacts"
 	@echo "  make all         - Build for current platform"

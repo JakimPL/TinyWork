@@ -98,6 +98,11 @@ class MacroInliner:
 
     def parse_macro_args(self, line: str, macro_name: str) -> List[str]:
         rest = line[len(macro_name) :].strip()
+
+        comment_pos = rest.find(";")
+        if comment_pos != -1:
+            rest = rest[:comment_pos].strip()
+
         if not rest:
             return []
 

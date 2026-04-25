@@ -1,5 +1,5 @@
-    %ifndef CORE_PALETTE_ASM
-    %define CORE_PALETTE_ASM
+    %ifndef CORE_PALETTE
+    %define CORE_PALETTE
 
 ; Grayscale palette generation
 ; defines the PALETTE_OUT macro with al argument:

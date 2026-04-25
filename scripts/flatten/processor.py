@@ -5,13 +5,18 @@ from flatten.constants import ELSE, ENDIF, IFDEF, IFNDEF, INCLUDE, Directive
 from flatten.preprocessor import PreprocessorState
 
 
-class AsmProcessor:
-    def __init__(self, base_path: Path) -> None:
+class ASMProcessor:
+    def __init__(self, base_path: Path, framework_path: Path) -> None:
         self.base_path = base_path
+        self.framework_path = framework_path
         self.state = PreprocessorState()
 
     def resolve_path(self, include_path: str) -> Path:
-        return self.base_path / include_path
+        if include_path.startswith("tiny/"):
+            relative_path = include_path.removeprefix("tiny/")
+            return self.framework_path / "tiny" / relative_path
+        else:
+            return self.base_path / include_path
 
     def get_directive(self, line: str) -> str:
         parts = line.split()
@@ -51,13 +56,12 @@ class AsmProcessor:
             return []
 
         parts = line.split('"')
-        if len(parts) >= 2:
-            include_path = parts[1]
-            full_path = self.resolve_path(include_path)
-            if full_path.exists():
-                return self.process_file(full_path)
+        if len(parts) < 2:
+            raise ValueError(f"Malformed include directive: {line}")
 
-        return []
+        include_path = parts[1]
+        full_path = self.resolve_path(include_path)
+        return self.process_file(full_path)
 
     def handle_ifdef(self, line: str) -> List[str]:
         parts = line.split()
