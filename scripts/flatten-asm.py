@@ -11,7 +11,7 @@ from flatten.reorganizer import ASMReorganizer
 def main() -> None:
     config = parse_arguments()
 
-    processor = ASMProcessor(config.project_directory, config.framework_directory)
+    processor = ASMProcessor(config.source_directory, config.framework_directory)
     result = processor.process_file(config.input_file)
 
     inliner = MacroInliner(config.macros_to_inline)

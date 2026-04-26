@@ -32,7 +32,7 @@ set_palette:
     xor ecx, ecx
     %endif
 
-    %include "core/palette.asm"
+    %include "palette.asm"
 
     section .text
     %ifndef COM

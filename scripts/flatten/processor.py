@@ -6,8 +6,8 @@ from flatten.preprocessor import GuardTracker, PreprocessorState
 
 
 class ASMProcessor:
-    def __init__(self, base_path: Path, framework_path: Path) -> None:
-        self.base_path = base_path
+    def __init__(self, source_path: Path, framework_path: Path) -> None:
+        self.source_path = source_path
         self.framework_path = framework_path
         self.state = PreprocessorState()
         self.guards = GuardTracker()
@@ -17,7 +17,7 @@ class ASMProcessor:
             relative_path = include_path.removeprefix("tiny/")
             return self.framework_path / "tiny" / relative_path
         else:
-            return self.base_path / include_path
+            return self.source_path / include_path
 
     def get_directive(self, line: str) -> str:
         parts = line.split()

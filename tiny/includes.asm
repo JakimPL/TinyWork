@@ -1,2 +1,2 @@
     %include "tiny/consts.asm"
-    %include "core/includes.asm"
+    %include "includes.asm"

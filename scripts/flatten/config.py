@@ -7,6 +7,7 @@ from typing import Tuple
 class FlattenConfig:
     project_directory: Path
     framework_directory: Path
+    source_directory: Path
     input_file: Path
     output_file: Path
     macros_to_inline: Tuple[str, ...]
@@ -14,4 +15,4 @@ class FlattenConfig:
 
     @property
     def header_file(self) -> Path:
-        return self.project_directory / "core" / "info.asm"
+        return self.source_directory / "info.asm"

@@ -7,7 +7,7 @@ initialize:
     pusha
     %endif
 
-    %include "core/init.asm"
+    %include "init.asm"
 
     %ifndef COM
     popa

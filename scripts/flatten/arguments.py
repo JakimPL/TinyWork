@@ -21,6 +21,12 @@ def parse_arguments() -> FlattenConfig:
         help="Framework root directory (where tiny/ folder is located)",
     )
     parser.add_argument(
+        "--src-directory",
+        type=Path,
+        required=True,
+        help="Source directory for project-specific assembly files",
+    )
+    parser.add_argument(
         "--input",
         type=Path,
         required=True,
@@ -52,6 +58,7 @@ def parse_arguments() -> FlattenConfig:
     return FlattenConfig(
         project_directory=args.project_directory.resolve(),
         framework_directory=args.framework_directory.resolve(),
+        source_directory=args.src_directory.resolve(),
         input_file=args.input.resolve(),
         output_file=args.output.resolve(),
         macros_to_inline=tuple(args.inline_macros),

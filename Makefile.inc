@@ -3,14 +3,14 @@
 
 # Required variables (must be set before including):
 #   PROJECT_NAME    - Name of your project (used for executable names)
-#   TINYWORK_DIR   - Path to this framework directory
+#   TINYWORK_DIR    - Path to this framework directory
+#   SOURCE_DIR      - Directory containing your project's assembly source files
 #
 # Optional variables (with defaults):
-#   MAIN_SRC        - Main C source (default: main.c)
-#   M32_SRC         - 32-bit assembly source (default: not built)
-#   COM_SRC         - COM binary source (default: not built)
+#   MAIN_C           - Main C source (default: main.c)
+#   MAIN_ASM         - COM binary source (default: main.asm)
 #   ASMFLAGS_OPTIONS - Custom assembly flags (default: empty)
-#   EXTRA_INCLUDES  - Additional include paths (default: empty)
+#   EXTRA_INCLUDES   - Additional include paths (default: empty)
 #
 # Framework assembly flags (0 by default, can be overridden):
 #   SKIP_SET_VIDEO_MODE           - Skip setting video mode
@@ -26,6 +26,10 @@ endif
 
 ifndef TINYWORK_DIR
 $(error TINYWORK_DIR must be defined before including framework Makefile)
+endif
+
+ifndef SOURCE_DIR
+$(error SOURCE_DIR must be defined before including framework Makefile)
 endif
 
 # Detect platform
@@ -76,8 +80,8 @@ LST_OUT = $(PROJECT_NAME).lst
 FLATTENED_ASM := $(or $(strip $(FLATTENED_ASM)),$(PROJECT_NAME).asm)
 
 # Default source files
-MAIN_SRC := $(or $(strip $(MAIN_SRC)),$(TINYWORK_DIR)/main.c)
-COM_SRC := $(or $(strip $(COM_SRC)),$(TINYWORK_DIR)/main.asm)
+MAIN_C := $(or $(strip $(MAIN_C)),$(TINYWORK_DIR)/main.c)
+MAIN_ASM := $(or $(strip $(MAIN_ASM)),$(TINYWORK_DIR)/main.asm)
 M32_SRC := $(TINYWORK_DIR)/tiny/m32.asm
 RUNTIME_SRC = $(RUNTIME_DIR)/runtime.c
 SDL_SRC = $(VIDEO_DIR)/video_sdl.c
@@ -99,6 +103,9 @@ CC_LINUX = gcc
 CC_WINDOWS = i686-w64-mingw32-gcc
 CC_DOS = i586-pc-msdosdjgpp-gcc
 ASM = nasm
+
+# Assembly source paths
+ASMINCLUDE_OPTIONS = -I$(TINYWORK_DIR) -I$(SOURCE_DIR)
 
 # Scripts
 SHOW_SIZES = $(TINYWORK_DIR)/scripts/show-sizes.sh
@@ -128,9 +135,9 @@ else
 endif
 
 # Custom flags (provided by including Makefile)
-ASMFLAGS_OPTIONS ?=
 CFLAGS_EXTRA ?=
 EXTRA_INCLUDES ?=
+ASMFLAGS_OPTIONS ?=
 
 # Framework assembly flags (can be overridden by user)
 # Set 1 to enable, 0 to disable (default: 0)
@@ -160,10 +167,10 @@ endif
 CFLAGS_LINUX = $(CFLAGS_BASE) $(CFLAGS_DEBUG) $(CFLAGS_EXTRA) -I$(VIDEO_DIR) -I$(RUNTIME_DIR) $(EXTRA_INCLUDES) -m32
 CFLAGS_WINDOWS = $(CFLAGS_BASE) $(CFLAGS_DEBUG) $(CFLAGS_EXTRA) -I$(VIDEO_DIR) -I$(RUNTIME_DIR) $(EXTRA_INCLUDES) -m32
 CFLAGS_DOS = $(CFLAGS_BASE) $(CFLAGS_DEBUG) $(CFLAGS_EXTRA) -I$(VIDEO_DIR) -I$(RUNTIME_DIR) $(EXTRA_INCLUDES)
-ASMFLAGS_LINUX = -f elf32 $(ASMFLAGS_DEBUG_LINUX) $(ASMFLAGS_OPTIONS) -I$(TINYWORK_DIR) -I. -DLINUX
-ASMFLAGS_WINDOWS = -f win32 --prefix _ $(ASMFLAGS_DEBUG_WINDOWS) $(ASMFLAGS_OPTIONS) -I$(TINYWORK_DIR) -I. -DWINDOWS
-ASMFLAGS_DOS = -f coff --prefix _ $(ASMFLAGS_DEBUG_DOS) $(ASMFLAGS_OPTIONS) -I$(TINYWORK_DIR) -I. -DDOS
-ASMFLAGS_COM = -f bin $(ASMFLAGS_OPTIONS) -I$(TINYWORK_DIR) -I. -DDOS -DCOM
+ASMFLAGS_LINUX = -f elf32 $(ASMFLAGS_DEBUG_LINUX) $(ASMFLAGS_OPTIONS) $(ASMINCLUDE_OPTIONS) -DLINUX
+ASMFLAGS_WINDOWS = -f win32 --prefix _ $(ASMFLAGS_DEBUG_WINDOWS) $(ASMFLAGS_OPTIONS) $(ASMINCLUDE_OPTIONS) -DWINDOWS
+ASMFLAGS_DOS = -f coff --prefix _ $(ASMFLAGS_DEBUG_DOS) $(ASMFLAGS_OPTIONS) $(ASMINCLUDE_OPTIONS) -DDOS
+ASMFLAGS_COM = -f bin $(ASMFLAGS_OPTIONS) $(ASMINCLUDE_OPTIONS) -DDOS -DCOM
 
 # Libraries
 LDFLAGS_LINUX = -lSDL2 -lm -Wl,-z,noexecstack -no-pie
@@ -186,7 +193,7 @@ all: dos
 endif
 
 # Append COM if source is defined
-ifdef COM_SRC
+ifdef MAIN_ASM
 all: com
 endif
 
@@ -226,9 +233,9 @@ endif
 .PHONY: linux
 linux: $(LINUX_OUT)
 
-$(LINUX_OUT): $(MAIN_SRC) $(RUNTIME_SRC) $(SDL_SRC) $(M32_OBJ_LINUX) | $(BIN_DIR)
+$(LINUX_OUT): $(MAIN_C) $(RUNTIME_SRC) $(SDL_SRC) $(M32_OBJ_LINUX) | $(BIN_DIR)
 	@echo "$(COLOR_BLUE)==> Building for Linux (SDL2)$(COLOR_RESET)"
-	$(CC_LINUX) $(CFLAGS_LINUX) -o $@ $(MAIN_SRC) $(RUNTIME_SRC) $(SDL_SRC) $(M32_OBJ_LINUX) $(LDFLAGS_LINUX)
+	$(CC_LINUX) $(CFLAGS_LINUX) -o $@ $(MAIN_C) $(RUNTIME_SRC) $(SDL_SRC) $(M32_OBJ_LINUX) $(LDFLAGS_LINUX)
 	@echo "$(COLOR_GREEN)Linux build complete: $(LINUX_OUT)$(COLOR_RESET)"
 	@echo
 
@@ -236,9 +243,9 @@ $(LINUX_OUT): $(MAIN_SRC) $(RUNTIME_SRC) $(SDL_SRC) $(M32_OBJ_LINUX) | $(BIN_DIR
 .PHONY: windows
 windows: $(WINDOWS_OUT)
 
-$(WINDOWS_OUT): $(MAIN_SRC) $(RUNTIME_SRC) $(SDL_SRC) $(M32_OBJ_WINDOWS) | $(BIN_DIR)
+$(WINDOWS_OUT): $(MAIN_C) $(RUNTIME_SRC) $(SDL_SRC) $(M32_OBJ_WINDOWS) | $(BIN_DIR)
 	@echo "$(COLOR_CYAN)==> Building for Windows (MinGW32 + SDL2)$(COLOR_RESET)"
-	$(CC_WINDOWS) $(CFLAGS_WINDOWS) -o $@ $(MAIN_SRC) $(RUNTIME_SRC) $(SDL_SRC) $(M32_OBJ_WINDOWS) $(LDFLAGS_WINDOWS)
+	$(CC_WINDOWS) $(CFLAGS_WINDOWS) -o $@ $(MAIN_C) $(RUNTIME_SRC) $(SDL_SRC) $(M32_OBJ_WINDOWS) $(LDFLAGS_WINDOWS)
 	@echo "$(COLOR_GREEN)Windows build complete: $(WINDOWS_OUT)$(COLOR_RESET)"
 	@echo
 
@@ -253,18 +260,18 @@ else
 	@$(MAKE) $(DOS_OUT)
 endif
 
-$(DOS_OUT): $(MAIN_SRC) $(RUNTIME_SRC) $(DOS_VIDEO_SRC) $(M32_OBJ_DOS) | $(BIN_DIR)
+$(DOS_OUT): $(MAIN_C) $(RUNTIME_SRC) $(DOS_VIDEO_SRC) $(M32_OBJ_DOS) | $(BIN_DIR)
 	@echo "$(COLOR_MAGENTA)==> Building for DOS (DJGPP)$(COLOR_RESET)"
-	$(CC_DOS) $(CFLAGS_DOS) -o $@ $(MAIN_SRC) $(RUNTIME_SRC) $(DOS_VIDEO_SRC) $(M32_OBJ_DOS) $(LDFLAGS_DOS)
+	$(CC_DOS) $(CFLAGS_DOS) -o $@ $(MAIN_C) $(RUNTIME_SRC) $(DOS_VIDEO_SRC) $(M32_OBJ_DOS) $(LDFLAGS_DOS)
 	@echo "$(COLOR_GREEN)DOS build complete: $(DOS_OUT)$(COLOR_RESET)"
 	@echo
 
 # COM build (Assembly only, optional)
-ifdef COM_SRC
+ifdef MAIN_ASM
 .PHONY: com
 com: $(COM_OUT)
 
-$(COM_OUT): $(COM_SRC) | $(BIN_DIR)
+$(COM_OUT): $(MAIN_ASM) | $(BIN_DIR)
 	@echo "$(COLOR_YELLOW)==> Building COM file$(COLOR_RESET)"
 	$(ASM) $(ASMFLAGS_COM) $< -o $@ -l $(BIN_DIR)/$(LST_OUT)
 	#@if [ -x "$(SHOW_SIZES)" ]
@@ -274,20 +281,20 @@ $(COM_OUT): $(COM_SRC) | $(BIN_DIR)
 else
 .PHONY: com
 com:
-	@echo "$(COLOR_YELLOW)COM build not configured (COM_SRC not defined)$(COLOR_RESET)"
+	@echo "$(COLOR_YELLOW)COM build not configured (MAIN_ASM not defined)$(COLOR_RESET)"
 endif
 
 # Show instruction sizes from listing
 .PHONY: sizes
 sizes:
-ifdef COM_SRC
+ifdef MAIN_ASM
 	#@if [ -x "$(SHOW_SIZES)" ]; then \
 		$(SHOW_SIZES) $(BIN_DIR)/$(LST_OUT); \
 	else \
 		echo "show-sizes.sh script not found"; \
 	fi
 else
-	@echo "$(COLOR_YELLOW)sizes target requires COM_SRC to be defined$(COLOR_RESET)"
+	@echo "$(COLOR_YELLOW)sizes target requires MAIN_ASM to be defined$(COLOR_RESET)"
 endif
 
 # Generate flattened assembly code
@@ -297,7 +304,8 @@ code:
 	@python3 $(FLATTEN_ASM) \
 		--project-directory . \
 		--framework-directory $(TINYWORK_DIR) \
-		--input $(COM_SRC) \
+		--src-directory $(SOURCE_DIR) \
+		--input $(MAIN_ASM) \
 		--output $(FLATTENED_ASM) \
 		--inline-macros $(FLATTEN_MACROS) \
 		--optional-labels $(FLATTEN_OPTIONAL_LABELS)
@@ -331,7 +339,7 @@ help:
 	@echo "  make linux       - Build for Linux with SDL2"
 	@echo "  make windows     - Build for Windows with MinGW32 and SDL2"
 	@echo "  make dos         - Cross-compile for DOS with DJGPP"
-ifdef COM_SRC
+ifdef MAIN_ASM
 	@echo "  make com         - Assemble standalone .com file"
 	@echo "  make sizes       - Show instruction sizes from .lst file"
 endif

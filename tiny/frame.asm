@@ -7,7 +7,7 @@ frame:
     pusha
     %endif
 
-    %include "core/frame.asm"
+    %include "frame.asm"
 
     %ifndef COM
     popa

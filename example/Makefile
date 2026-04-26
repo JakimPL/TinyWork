@@ -3,14 +3,18 @@
 # Project name and structure (required)
 PROJECT_NAME = example
 TINYWORK_DIR = ..
+SOURCE_DIR = core
 
 # Source files
-MAIN_SRC = # using default: tinywork/main.c
-COM_SRC = # using default: tinywork/main.asm
+MAIN_C = # using default: tinywork/main.c
+MAIN_ASM = # using default: tinywork/main.asm
 
 # Build directories (leave empty to use defaults `bin` and `build`)
 BIN_DIR =
 BUILD_DIR =
+
+# Final flattened assembly file (`${PROJECT_NAME}.asm` by default)
+FLATTEN_ASM =
 
 # Custom flags (optional)
 EXTRA_INCLUDES =

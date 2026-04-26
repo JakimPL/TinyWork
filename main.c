@@ -2,7 +2,7 @@
  * TinyWork Framework - Default main.c
  * Standard entry point for 320x200 demos
  *
- * Override by setting MAIN_SRC in your Makefile if custom logic needed
+ * Override by setting MAIN_C in your Makefile if custom logic needed
  */
 
 #include "runtime/runtime.h"

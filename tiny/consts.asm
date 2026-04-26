@@ -2,6 +2,6 @@
     %define TINYWORK_CONSTS
 
     %include "tiny/dos.asm"
-    %include "core/consts.asm"
+    %include "consts.asm"
 
     %endif

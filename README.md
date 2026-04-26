@@ -19,66 +19,72 @@ git submodule add https://github.com/JakimPL/TinyWork.git tinywork
 git submodule update --init --recursive
 ```
 
-The framework expects your project to follow a specific structure with a `core/` directory containing your effect code. See the `tinywork/example/` directory for a complete working example demonstrating the minimal required files and structure.
+The framework expects your project to follow a specific structure with a source directory (`core/` by default) containing your effect code. See the `tinywork/example/` directory for a complete working example demonstrating the minimal required files and structure.
 
 ## Project Structure
 
-_TinyWork_ uses a contract-based approach where you provide specific assembly files in a `core/` directory. The framework includes these files at designated points during compilation, handling platform differences and function wrappers automatically.
+_TinyWork_ uses a contract-based approach where you provide specific assembly files in the declared source directory. The framework includes these files at designated points during compilation, handling platform differences and function wrappers automatically.
 
 Your `demo` project should be of the following form:
 
 ```
 demo/
-├── Makefile
-├── core/
+├── Makefile               ; Project definition
+├── core/                  ; Source directory, `core` by default
 │   ├── frame.asm
 │   ├── palette.asm
 │   ├── consts.asm
 │   ├── includes.asm
 │   └── info.asm
-└── tinywork/
-    ├── Makefile.inc
-    ├── main.asm
-    ├── tiny/
+└── tinywork/              ; TinyWork submodule
+    ├── Makefile.inc       ; Framework compilation tools
+    ├── main.asm           ; COM entry point
+    ├── main.c             ; 32-bit targets entry point
+    ├── tiny/              ; TinyWork assembly code
     │   ├── consts.asm
     │   ├── dos.asm
     │   ├── frame.asm
     │   ├── includes.asm
     │   ├── m32.asm
     │   └── palette.asm
-    ├── runtime/
-    ├── scripts/
-    └── video/
+    ├── runtime/           ; 32-bit targets application logic
+    ├── scripts/           ; Utilities
+    └── video/             ; SDL2/DOS VGA C interfaces
 ```
 
 ### Contract
 
-The project is defined by a `Makefile` in your project root that sets two required variables and includes the framework's build system:
+The project is defined by a `Makefile` in your project root that sets three required variables and includes the framework's build system:
 
 ```makefile
 PROJECT_NAME = demo
 TINYWORK_DIR = tinywork
+SOURCE_DIR = core
 
 include $(TINYWORK_DIR)/Makefile.inc
 ```
 
-The `PROJECT_NAME` determines the output binary names (e.g., `demo.com`, `demo-linux`). The `TINYWORK_DIR` points to the framework submodule. Including `Makefile.inc` brings in the complete build system with targets for all platforms.
+The `PROJECT_NAME` determines the output binary names (e.g., `demo.com`, `demo-linux`). The `TINYWORK_DIR` points to the framework submodule (usually `tinywork`). The `SOURCE_DIR` specifies the directory containing your project's assembly source files (defaults to `core` if not specified).
 
-Your project must provide a `core/` directory containing five assembly files that _TinyWork_ includes at specific points during compilation:
+Including `Makefile.inc` brings in the complete build system with targets for all platforms.
 
-**`core/frame.asm`** — The main effect algorithm executed once per frame. Write your rendering code here.
+Your project must provide the following source assembly files that _TinyWork_ includes at specific points during compilation:
 
-**`core/palette.asm`** — The palette generation loop body. This code runs 256 times to build the color palette.
+**`frame.asm`** — The main effect algorithm executed once per frame. Write your rendering code here.
 
-**`core/consts.asm`** — Project-specific constants and definitions.
+**`palette.asm`** — The palette generation code.
 
-**`core/includes.asm`** — Additional assembly files your effect needs (helper functions, lookup tables, utilities). Can be empty.
+**`init.asm`** — Custom initialization logic for the COM entry point. Can be empty.
 
-**`core/info.asm`** — Comment-only file for project metadata (title, author/group, ASCII art). No executable code.
+**`consts.asm`** — Project-specific constants and definitions.
 
-The framework provides default entry points (`tinywork/main.c` and `tinywork/main.asm`) that work with this structure. These handle video mode setup, palette initialization, the main loop, and platform-specific details.
+**`includes.asm`** — Additional assembly files your effect needs (data, helper functions, declared variables etc.). Can be empty.
 
-These files can be overriden by setting `MAIN_SRC` or `COM_SRC` in your `Makefile` if custom initialization is needed.
+**`info.asm`** — Comment-only file for project metadata (title, author/group, ASCII art). No executable code.
+
+The framework provides default entry points (`tinywork/main.c` and `tinywork/main.asm`) that work with this structure. These handle video mode setup, initialization logic including palette construction, the main loop, and platform-specific details.
+
+These files can be overridden by setting `MAIN_C` or `MAIN_ASM` in your `Makefile` if custom initialization is needed.
 
 ## Building
 
@@ -132,10 +138,10 @@ start:
     %endif
 
 __initialize:
-    %include "tiny/init.asm"       ; Custom initialization (calls core/init.asm)
+    %include "tiny/init.asm"       ; Custom initialization (calls init.asm)
 
 __set_palette:
-    %include "tiny/palette.asm"    ; Generate palette (calls core/palette.asm)
+    %include "tiny/palette.asm"    ; Generate palette (calls palette.asm)
 
 main_loop:
     %ifndef SKIP_SET_VIDEO_MEMORY_SEGMENT
@@ -148,7 +154,7 @@ vsync:
     %endif
 
 __frame:
-    %include "tiny/frame.asm"      ; Main demo code (calls core/frame.asm)
+    %include "tiny/frame.asm"      ; Main demo code (calls frame.asm)
 
     %ifndef SKIP_CHECK_INPUT
 check_input:
@@ -185,7 +191,7 @@ These flags are passed on the command line (e.g., `NO_VSYNC=1 make com`) or set 
 
 The initialization wrapper allows you to execute custom setup code before the main loop begins. This code runs once after video mode setup but before palette generation, and works for both COM and 32-bit targets.
 
-The framework includes `core/init.asm` through the wrapper:
+The framework includes `init.asm` through the wrapper:
 
 ```asm
 section .text
@@ -194,7 +200,7 @@ initialize:
     pusha
     %endif
 
-    %include "core/init.asm"
+    %include "init.asm"
 
     %ifndef COM
     popa
@@ -204,11 +210,11 @@ initialize:
 
 For COM builds, your initialization code is included inline. For 32-bit builds, it's wrapped in an `initialize()` function with automatic register preservation.
 
-Use `core/init.asm` for one-time setup tasks such as calculating lookup tables, initializing variables, or preparing data structures. This file can be empty if no initialization is needed.
+Use `init.asm` for one-time setup tasks such as calculating lookup tables, initializing variables, or preparing data structures. This file can be empty if no initialization is needed.
 
 ### Palette Generation (`tiny/palette.asm`)
 
-The palette generation wrapper sets up the necessary infrastructure and calls your `core/palette.asm` code to generate the 256-color VGA palette. For 32-bit targets (Linux, Windows, DOS executable), `set_palette` is exported as a callable function that the C runtime invokes during initialization.
+The palette generation wrapper sets up the necessary infrastructure and calls your `palette.asm` code to generate the 256-color VGA palette. For 32-bit targets (Linux, Windows, DOS executable), `set_palette` is exported as a callable function that the C runtime invokes during initialization.
 
 The framework defines a `PALETTE_OUT` macro that abstracts platform differences:
 
@@ -224,7 +230,7 @@ The framework defines a `PALETTE_OUT` macro that abstracts platform differences:
 %endif
 ```
 
-Your `core/palette.asm` should set up the loop and destination registers, then generate palette entries by calling `PALETTE_OUT` for each RGB component:
+Your `palette.asm` should set up the loop and destination registers, then generate palette entries by calling `PALETTE_OUT` for each RGB component:
 
 ```asm
 palette:
@@ -249,13 +255,13 @@ palette:
     loop .palette_loop
 ```
 
-For 32-bit platforms, the framework treats `set_palette` as a function called by C routines. On DOS (both COM and 32-bit target), colors are written directly to VGA hardware. On SDL2 targets, the code populate the buffer that the video subsystem uses to configure SDL2's palette.
+For 32-bit platforms, the framework treats `set_palette` as a function called by C routines. On DOS (both COM and 32-bit target), colors are written directly to VGA hardware. On SDL2 targets, the code populates the buffer that the video subsystem uses to configure SDL2's palette.
 
 Note that for COM builds, you can leave the palette generation empty to use the VGA hardware's default palette without any overhead. However, for SDL2 targets, the palette must be explicitly initialized as there is no default.
 
 ### Frame Rendering (`tiny/frame.asm`)
 
-The frame rendering wrapper calls your `core/frame.asm` code once per iteration of the main loop. The framework handles the platform-specific differences between COM and 32-bit builds automatically.
+The frame rendering wrapper calls your `frame.asm` code once per iteration of the main loop. The framework handles the platform-specific differences between COM and 32-bit builds automatically.
 
 ```asm
     section .text
@@ -264,7 +270,7 @@ frame:
     pusha
     %endif
 
-    %include "core/frame.asm"
+    %include "frame.asm"
 
     %ifndef COM
     popa
@@ -279,7 +285,7 @@ For COM builds, your code is included inline within the main loop. You can write
 
 For 32-bit builds, you write to an `image` buffer defined in the `.bss` section. The C runtime calls this function each frame and transfers the buffer contents to the display.
 
-Your `core/frame.asm` contains the actual rendering algorithm. The framework defines platform conditionals (`COM`, `DOS`) that you use to handle register and memory access differences:
+Your `frame.asm` contains the actual rendering algorithm. The framework defines platform conditionals (`COM`, `DOS`) that you use to handle register and memory access differences:
 
 ```asm
 ; Example from tinywork/example/core/frame.asm
@@ -306,29 +312,29 @@ The framework preserves all registers across the function call on 32-bit targets
 
 Note that for 32-bit builds, the wrapper includes `tiny/includes.asm` after the frame function definition. This mechanism allows you to add additional code beyond the frame rendering. See the next section for details.
 
-### Additional Code (`core/includes.asm`)
+### Additional Code (`tiny/includes.asm`)
 
-The `core/includes.asm` file lets you include additional assembly files that your effect needs beyond the main frame and palette code. Use `%include` directives to bring in helper files with functions, data sections, or variable declarations.
+The `includes.asm` file lets you include additional assembly files that your effect needs beyond the main frame and palette code. Use `%include` directives to bring in helper files with functions, data sections, or variable declarations.
 
-The framework includes this file through `tiny/includes.asm`:
+The framework includes your `include.asm` file through `tiny/includes.asm`:
 
 ```asm
 %include "tiny/consts.asm"
-%include "core/includes.asm"
+%include "includes.asm"
 ```
 
-Example usage in `core/includes.asm`:
+Example usage in `includes.asm`:
 
 ```asm
-%include "core/data.asm"       ; Data sections
-%include "core/vars.asm"       ; Variable declarations
+%include "data.asm"       ; Data sections
+%include "vars.asm"       ; Variable declarations
 ```
 
-For COM builds, `tiny/includes.asm` is included at the end of `main.asm`. For 32-bit builds, it's included within `tiny/frame.asm` after the frame function definition, making part of the frame compilation unit. That means that **included source files are bound to `frame.asm`**.
+For COM builds, `tiny/includes.asm` is included at the end of `main.asm`. For 32-bit builds, it's included within `tiny/frame.asm` after the frame function definition, making it part of the frame compilation unit. This means that **included source files are bound to `frame.asm`**.
 
-### Project Metadata (`core/info.asm`)
+### Project Metadata (`info.asm`)
 
-The `core/info.asm` file is not used during compilation. Instead, it's prepended to the final flattened assembly code generated by `make code`. Use this file to document your project with comments containing the title, author information, maybe some implementation details if you wish, or even ASCII art.
+The `info.asm` file is not used during compilation. Instead, it's prepended to the final flattened assembly code generated by `make code`. Use this file to document your project with comments containing the title, author information, maybe some implementation details if you wish, or even ASCII art.
 
 Example:
 
@@ -380,7 +386,7 @@ int main(int, char **) {
 }
 ```
 
-This initializes the video subsystem, calls your assembly `initialize()` and `frame()` functions through `run()`, then cleans up on exit. Override this by setting `MAIN_SRC` in your Makefile if you need custom startup logic.
+This initializes the video subsystem, calls your assembly `initialize()` and `frame()` functions through `run()`, then cleans up on exit. Override this by setting `MAIN_C` in your Makefile if you need custom startup logic.
 
 ### Runtime (`runtime/`)
 
@@ -410,13 +416,13 @@ The `make code` target generates a flattened assembly file from your project by 
 make code
 ```
 
-The flattener processes `COM_SRC` (typically `tinywork/main.asm`) and outputs a complete assembly file containing all your effect code with framework infrastructure removed.
+The flattener processes `MAIN_ASM` (typically `tinywork/main.asm`) and outputs a complete assembly file containing all your effect code with framework infrastructure removed.
 
 ### Processing Pipeline
 
 The code generator performs several transformations:
 
-**Include Resolution**: Recursively processes all `%include` directives, distinguishing between framework files (prefixed with `tiny/`) and project files. Both can be located anywhere in the filesystem. During this step, all 32-bit code is being removed, including target-specific preprocessor directives.
+**Include Resolution**: Recursively processes all `%include` directives, distinguishing between framework files (prefixed with `tiny/`) and project files. Framework files are located in the `TINYWORK_DIR`, while project files are located in the `SOURCE_DIR`. During this step, all 32-bit code is removed, including target-specific preprocessor directives.
 
 **Include Guard Deduplication**: Detects `%ifndef`/`%define` guard patterns and skips duplicate guard blocks when files are included multiple times. Guard `%define` statements are removed from output.
 
@@ -426,7 +432,7 @@ The code generator performs several transformations:
 
 **Output Formatting**: Strips `global` directives, removes redundant empty lines, and ensures consistent spacing.
 
-**Header Prepending**: Adds `core/info.asm` contents to the top of the output for project metadata and documentation.
+**Header Prepending**: Adds `info.asm` contents to the top of the output for project metadata and documentation.
 
 ### Configuration
 
@@ -465,6 +471,7 @@ Example:
 ```makefile
 PROJECT_NAME = demo
 TINYWORK_DIR = tinywork
+SOURCE_DIR = core
 
 BIN_DIR = output
 BUILD_DIR = .build
@@ -474,15 +481,15 @@ include $(TINYWORK_DIR)/Makefile.inc
 
 ### Source Files
 
-**`MAIN_SRC`** — Entry point for 32-bit builds (default: `tinywork/main.c`)
+**`MAIN_C`** — Entry point for 32-bit builds (default: `tinywork/main.c`)
 
-**`COM_SRC`** — Entry point for COM builds (default: `tinywork/main.asm`)
+**`MAIN_ASM`** — Entry point for COM builds (default: `tinywork/main.asm`)
 
 Override these when you need custom initialization logic or entry points:
 
 ```makefile
-MAIN_SRC = src/custom_main.c
-COM_SRC = src/custom_com.asm
+MAIN_C = src/custom_main.c
+MAIN_ASM = src/custom_com.asm
 
 include $(TINYWORK_DIR)/Makefile.inc
 ```
