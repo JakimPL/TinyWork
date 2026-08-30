@@ -1,12 +1,11 @@
 from pathlib import Path
-from typing import List
 
 
 class HeaderPrepender:
     def __init__(self, header_file: Path) -> None:
         self.header_file = header_file
 
-    def prepend(self, lines: List[str]) -> List[str]:
+    def prepend(self, lines: list[str]) -> list[str]:
         if not self.header_file.exists():
             return lines
 

@@ -7,12 +7,12 @@ class MacroDefinition:
     def __init__(self, name: str, param_count: int) -> None:
         self.name = name
         self.param_count = param_count
-        self.body: List[str] = []
+        self.body: list[str] = []
 
     def add_line(self, line: str) -> None:
         self.body.append(line)
 
-    def expand(self, args: List[str]) -> List[str]:
+    def expand(self, args: list[str]) -> list[str]:
         expanded = []
         for line in self.body:
             expanded_line = line
@@ -25,16 +25,16 @@ class MacroDefinition:
 
 
 class MacroInliner:
-    def __init__(self, macros_to_inline: Tuple[str, ...]) -> None:
+    def __init__(self, macros_to_inline: tuple[str, ...]) -> None:
         self.macros_to_inline = set(macros_to_inline)
-        self.macros: Dict[str, MacroDefinition] = {}
-        self.current_macro: Optional[MacroDefinition] = None
+        self.macros: dict[str, MacroDefinition] = {}
+        self.current_macro: MacroDefinition | None = None
 
     def get_directive(self, line: str) -> str:
         parts = line.split()
         return parts[0] if parts else ""
 
-    def process_lines(self, lines: List[str]) -> List[str]:
+    def process_lines(self, lines: list[str]) -> list[str]:
         result = []
 
         for line in lines:
@@ -44,7 +44,7 @@ class MacroInliner:
 
         return result
 
-    def process_line(self, line: str) -> Optional[List[str]]:
+    def process_line(self, line: str) -> list[str] | None:
         stripped = line.strip()
         directive = self.get_directive(stripped)
 
@@ -58,7 +58,7 @@ class MacroInliner:
             case _:
                 return self.handle_macro_invocation(line)
 
-    def handle_macro_start(self, line: str) -> Optional[List[str]]:
+    def handle_macro_start(self, line: str) -> list[str] | None:
         parts = line.split()
         if len(parts) >= 3:
             macro_name = parts[1]
@@ -70,7 +70,7 @@ class MacroInliner:
 
         return [line]
 
-    def handle_macro_end(self) -> Optional[List[str]]:
+    def handle_macro_end(self) -> list[str] | None:
         if self.current_macro is not None:
             self.macros[self.current_macro.name] = self.current_macro
             self.current_macro = None
@@ -78,14 +78,14 @@ class MacroInliner:
 
         return [ENDMACRO]
 
-    def handle_macro_body(self, line: str) -> Optional[List[str]]:
+    def handle_macro_body(self, line: str) -> list[str] | None:
         if self.current_macro is not None:
             self.current_macro.add_line(line)
             return []
 
         return [line]
 
-    def handle_macro_invocation(self, line: str) -> Optional[List[str]]:
+    def handle_macro_invocation(self, line: str) -> list[str] | None:
         stripped = line.strip()
 
         for macro_name, macro_def in self.macros.items():
@@ -96,7 +96,7 @@ class MacroInliner:
 
         return [line]
 
-    def parse_macro_args(self, line: str, macro_name: str) -> List[str]:
+    def parse_macro_args(self, line: str, macro_name: str) -> list[str]:
         rest = line[len(macro_name) :].strip()
 
         comment_pos = rest.find(";")

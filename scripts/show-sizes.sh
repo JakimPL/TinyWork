@@ -6,7 +6,7 @@ if [ -z "$1" ]; then
     exit 1
 fi
 
-# Process the file and save to temp, then replace original
+# Annotate the listing with instruction sizes and write it to stdout
 awk '
 {
     # Match lines with line number in first field
@@ -61,4 +61,4 @@ awk '
         print
     }
 }
-' "$1" > "$1.tmp" && mv "$1.tmp" "$1"
+' "$1"

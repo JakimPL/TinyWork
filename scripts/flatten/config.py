@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Tuple
 
 
 @dataclass
@@ -10,8 +9,9 @@ class FlattenConfig:
     source_directory: Path
     input_file: Path
     output_file: Path
-    macros_to_inline: Tuple[str, ...]
-    optional_labels: Tuple[str, ...]
+    macros_to_inline: tuple[str, ...]
+    optional_labels: tuple[str, ...]
+    defines: tuple[str, ...]
 
     @property
     def header_file(self) -> Path:

@@ -1,15 +1,20 @@
 from pathlib import Path
-from typing import List, Optional
 
 from flatten.constants import DEFINE, ELSE, ENDIF, IFDEF, IFNDEF, INCLUDE, Directive
 from flatten.preprocessor import GuardTracker, PreprocessorState
 
 
 class ASMProcessor:
-    def __init__(self, source_path: Path, framework_path: Path) -> None:
+    def __init__(
+        self,
+        source_path: Path,
+        framework_path: Path,
+        *,
+        defines: frozenset[str],
+    ) -> None:
         self.source_path = source_path
         self.framework_path = framework_path
-        self.state = PreprocessorState()
+        self.state = PreprocessorState(defines)
         self.guards = GuardTracker()
 
     def resolve_path(self, include_path: str) -> Path:
@@ -27,7 +32,7 @@ class ASMProcessor:
         parts = line.split()
         return parts[index] if len(parts) > index else default
 
-    def process_file(self, file_path: Path) -> List[str]:
+    def process_file(self, file_path: Path) -> list[str]:
         lines = file_path.read_text().splitlines()
         result = []
 
@@ -38,12 +43,12 @@ class ASMProcessor:
 
         return result
 
-    def process_line(self, line: str) -> Optional[List[str]]:
+    def process_line(self, line: str) -> list[str] | None:
         stripped = line.strip()
         directive = self.get_directive(stripped)
 
         if self.guards.is_skipping():
-            if directive.startswith(IFNDEF) or directive.startswith(IFDEF):
+            if directive.startswith((IFNDEF, IFDEF)):
                 self.guards.enter_ifdef()
             elif directive.startswith(ENDIF):
                 self.guards.exit_conditional()
@@ -66,7 +71,7 @@ class ASMProcessor:
                 self.guards.break_guard_pattern()
                 return [line] if self.state.should_keep_line() else []
 
-    def handle_include(self, line: str) -> List[str]:
+    def handle_include(self, line: str) -> list[str]:
         if not self.state.should_keep_line():
             return []
 
@@ -78,13 +83,13 @@ class ASMProcessor:
         full_path = self.resolve_path(include_path)
         return self.process_file(full_path)
 
-    def handle_ifdef(self, line: str) -> List[str]:
+    def handle_ifdef(self, line: str) -> list[str]:
         symbol = self.get_word(line, 1)
         self.guards.enter_ifdef()
         self.state.push_block(Directive.IFDEF, symbol)
         return []
 
-    def handle_ifndef(self, line: str) -> List[str]:
+    def handle_ifndef(self, line: str) -> list[str]:
         symbol = self.get_word(line, 1)
 
         should_skip = self.guards.enter_ifndef(symbol)
@@ -94,7 +99,7 @@ class ASMProcessor:
         self.state.push_block(Directive.IFNDEF, symbol)
         return []
 
-    def handle_define(self, line: str) -> List[str]:
+    def handle_define(self, line: str) -> list[str]:
         symbol = self.get_word(line.strip(), 1)
 
         should_output = self.guards.process_define(symbol)
@@ -103,12 +108,12 @@ class ASMProcessor:
 
         return [line] if self.state.should_keep_line() else []
 
-    def handle_else(self) -> List[str]:
+    def handle_else(self) -> list[str]:
         self.guards.handle_else()
         self.state.handle_else()
         return []
 
-    def handle_endif(self) -> List[str]:
+    def handle_endif(self) -> list[str]:
         self.guards.exit_conditional()
         self.state.pop_block()
         return []

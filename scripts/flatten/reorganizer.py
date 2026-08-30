@@ -1,15 +1,13 @@
-from typing import List, Optional
-
 from flatten.constants import ENDMACRO, MACRO
 
 
 class CodeSection:
     def __init__(self) -> None:
-        self.constants: List[str] = []
-        self.macros: List[str] = []
-        self.defines: List[str] = []
-        self.org_directive: Optional[str] = None
-        self.rest: List[str] = []
+        self.constants: list[str] = []
+        self.macros: list[str] = []
+        self.defines: list[str] = []
+        self.org_directive: str | None = None
+        self.rest: list[str] = []
 
 
 class ASMReorganizer:
@@ -70,11 +68,11 @@ class ASMReorganizer:
         else:
             self.section.rest.append(line)
 
-    def reorganize(self, lines: List[str]) -> List[str]:
+    def reorganize(self, lines: list[str]) -> list[str]:
         for line in lines:
             self.categorize_line(line)
 
-        result: List[str] = []
+        result: list[str] = []
 
         if self.section.constants:
             result.extend(self.section.constants)

@@ -1,12 +1,10 @@
-from typing import List, Optional, Set
-
 from flatten.constants import Directive
 
 
 class GuardTracker:
     def __init__(self) -> None:
-        self._seen_guards: Set[str] = set()
-        self._expecting_guard_define: Optional[str] = None
+        self._seen_guards: set[str] = set()
+        self._expecting_guard_define: str | None = None
         self._skip_depth = 0
         self._current_depth = 0
 
@@ -51,10 +49,18 @@ class GuardTracker:
 
 
 class PreprocessorBlock:
-    def __init__(self, directive: Directive, symbol: str, parent_active: bool) -> None:
+    def __init__(
+        self,
+        directive: Directive,
+        symbol: str,
+        *,
+        parent_active: bool,
+        defines: frozenset[str],
+    ) -> None:
         self.directive = directive
         self.symbol = symbol
         self.parent_active = parent_active
+        self.defines = defines
         self.in_else = False
         self.was_active = self.compute_active()
 
@@ -62,7 +68,7 @@ class PreprocessorBlock:
         if not self.parent_active:
             return False
 
-        is_defined = self.symbol in {"COM", "DOS"}
+        is_defined = self.symbol in self.defines
 
         match self.directive:
             case Directive.IFDEF:
@@ -80,8 +86,9 @@ class PreprocessorBlock:
 
 
 class PreprocessorState:
-    def __init__(self) -> None:
-        self.block_stack: List[PreprocessorBlock] = []
+    def __init__(self, defines: frozenset[str]) -> None:
+        self.defines = defines
+        self.block_stack: list[PreprocessorBlock] = []
 
     def should_keep_line(self) -> bool:
         for block in self.block_stack:
@@ -92,7 +99,12 @@ class PreprocessorState:
 
     def push_block(self, directive: Directive, symbol: str) -> None:
         parent_active = self.should_keep_line()
-        block = PreprocessorBlock(directive, symbol, parent_active)
+        block = PreprocessorBlock(
+            directive,
+            symbol,
+            parent_active=parent_active,
+            defines=self.defines,
+        )
         self.block_stack.append(block)
 
     def handle_else(self) -> None:

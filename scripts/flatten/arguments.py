@@ -2,7 +2,11 @@ import argparse
 from pathlib import Path
 
 from flatten.config import FlattenConfig
-from flatten.constants import DEFAULT_MACROS_TO_INLINE, DEFAULT_OPTIONAL_LABELS
+from flatten.constants import (
+    DEFAULT_DEFINES,
+    DEFAULT_MACROS_TO_INLINE,
+    DEFAULT_OPTIONAL_LABELS,
+)
 
 
 def parse_arguments() -> FlattenConfig:
@@ -53,6 +57,17 @@ def parse_arguments() -> FlattenConfig:
         help=f"Labels to remove if empty (default: {', '.join(DEFAULT_OPTIONAL_LABELS)})",
     )
 
+    parser.add_argument(
+        "--defines",
+        type=str,
+        nargs="*",
+        default=DEFAULT_DEFINES,
+        help=(
+            "Preprocessor symbols to treat as defined, mirroring the -D flags the COM build uses "
+            f"(default: {', '.join(DEFAULT_DEFINES)})"
+        ),
+    )
+
     args = parser.parse_args()
 
     return FlattenConfig(
@@ -63,4 +78,5 @@ def parse_arguments() -> FlattenConfig:
         output_file=args.output.resolve(),
         macros_to_inline=tuple(args.inline_macros),
         optional_labels=tuple(args.optional_labels),
+        defines=tuple(args.defines),
     )
