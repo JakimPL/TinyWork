@@ -98,6 +98,12 @@ make dos      # Build 32-bit DOS executable (requires DJGPP)
 make com      # Build tiny COM binary
 ```
 
+PCM playback is enabled per project with `PCM_PLAYBACK=1`, either in the project `Makefile` or on the command line:
+
+```bash
+make PCM_PLAYBACK=1 linux
+```
+
 The `all-targets` target builds all platforms at once:
 
 ```bash
@@ -312,6 +318,32 @@ The framework preserves all registers across the function call on 32-bit targets
 
 Note that for 32-bit builds, the wrapper includes `tiny/includes.asm` after the frame function definition. This mechanism allows you to add additional code beyond the frame rendering. See the next section for details.
 
+### PCM Playback (`audio/`)
+
+PCM playback is opt-in and names one specific method: a buffer of 8-bit samples per frame, handed to the host's sound device. A demo driving an OPL chip, the PC speaker or MIDI wants none of it and leaves it off. Setting `PCM_PLAYBACK = 1` in your project's `Makefile` links the subsystem:
+
+```makefile
+PCM_PLAYBACK = 1
+```
+
+The contract mirrors the video one. Your `frame.asm` fills `pcm_buffer` with one frame's worth of samples, the same way it fills `image` with one frame's worth of pixels, and the runtime hands the buffer to the sound device once `frame()` returns. The framework declares the buffer, so your project writes to it directly:
+
+```asm
+    stosb                              ; with REG(di) pointing at pcm_buffer
+```
+
+Samples are unsigned 8-bit mono. The frame size and the resulting rate live in `audio/pcm.h` and are mirrored in `tiny/dos.asm`:
+
+| Constant | Value |
+|---|---|
+| `PCM_SAMPLES_PER_FRAME` | 160 |
+| `PCM_FRAME_RATE` | 60 |
+| `PCM_SAMPLE_RATE` | 9600 Hz |
+
+On Linux and Windows the samples go to SDL's audio queue, which keeps the demo on a single thread. The queue is allowed to stand a few frames deep to absorb the jitter of the main loop, and waiting for it to drain back to that depth is what paces the demo — the sound card takes the role the timer chip plays on DOS.
+
+On DOS, both the COM target and the DJGPP executable address the sound card from assembly through port I/O, so this subsystem is absent there entirely and the demo owns the samples and their timing. Nothing here costs the COM target a single byte.
+
 ### Additional Code (`tiny/includes.asm`)
 
 The `includes.asm` file lets you include additional assembly files that your effect needs beyond the main frame and palette code. Use `%include` directives to bring in helper files with functions, data sections, or variable declarations.
@@ -363,10 +395,13 @@ tinywork/
 ├── runtime/
 │   ├── runtime.h       # Runtime interface
 │   └── runtime.c       # Main loop and input handling
-└── video/
-    ├── video.h         # Video subsystem interface
-    ├── video_sdl.c     # SDL2 implementation (Linux/Windows)
-    └── video_dos.c     # VGA implementation (DOS executable)
+├── video/
+│   ├── video.h         # Video subsystem interface
+│   ├── video_sdl.c     # SDL2 implementation (Linux/Windows)
+│   └── video_dos.c     # VGA implementation (DOS executable)
+└── audio/
+    ├── pcm.h           # PCM playback interface
+    └── pcm_sdl.c       # SDL2 queue implementation (Linux/Windows)
 ```
 
 ### Main Entry Point (`main.c`)

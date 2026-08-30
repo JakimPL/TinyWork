@@ -18,6 +18,10 @@
 #   NO_VSYNC                      - Disable VSYNC waiting
 #   SKIP_CHECK_INPUT              - Skip keyboard input check (infinite loop)
 #   RETURN_TO_DOS                 - Enable clean DOS exit
+#
+# Framework features (0 by default):
+#   PCM_PLAYBACK                  - Play pcm_buffer through the host sound device
+#                                   (32-bit SDL targets; DOS demos drive the card themselves)
 
 # Validate required variables
 ifndef PROJECT_NAME
@@ -65,6 +69,7 @@ endif
 BIN_DIR := $(or $(strip $(BIN_DIR)),bin)
 BUILD_DIR := $(or $(strip $(BUILD_DIR)),build)
 VIDEO_DIR = $(TINYWORK_DIR)/video
+AUDIO_DIR = $(TINYWORK_DIR)/audio
 RUNTIME_DIR = $(TINYWORK_DIR)/runtime
 
 LINUX_BUILD = $(BUILD_DIR)/linux
@@ -86,10 +91,17 @@ M32_SRC := $(TINYWORK_DIR)/tiny/m32.asm
 RUNTIME_SRC = $(RUNTIME_DIR)/runtime.c
 SDL_SRC = $(VIDEO_DIR)/video_sdl.c
 DOS_VIDEO_SRC = $(VIDEO_DIR)/video_dos.c
+SDL_PCM_SRC = $(AUDIO_DIR)/pcm_sdl.c
 
 # Flattening configuration
 FLATTEN_MACROS := $(or $(strip $(FLATTEN_MACROS)),PALETTE_OUT)
 FLATTEN_OPTIONAL_LABELS := $(or $(strip $(FLATTEN_OPTIONAL_LABELS)),initialize set_palette)
+
+# Symbols the flattener treats as defined. This mirrors ASMFLAGS_COM, so the
+# flattened source matches the binary the COM target actually produced.
+FLATTEN_DEFINE_NAMES = $(foreach flag,$(filter -D%,$(ASMFLAGS_OPTIONS)),\
+	$(firstword $(subst =, ,$(patsubst -D%,%,$(flag)))))
+FLATTEN_DEFINES = DOS COM $(FLATTEN_DEFINE_NAMES)
 
 # Object files (in build subdirectories)
 ifdef M32_SRC
@@ -109,13 +121,13 @@ ASMINCLUDE_OPTIONS = -I$(TINYWORK_DIR) -I$(SOURCE_DIR)
 
 # Scripts
 SHOW_SIZES = $(TINYWORK_DIR)/scripts/show-sizes.sh
-FLATTEN_ASM = $(TINYWORK_DIR)/scripts/flatten-asm.py
+FLATTEN_ASM = $(TINYWORK_DIR)/scripts/flatten_asm.py
 
 # Check if DOS compiler is available
 DJGPP_AVAILABLE := $(shell command -v $(CC_DOS) 2>/dev/null)
 
 # Base flags
-CFLAGS_BASE = -Wall -Wextra -mno-sse -mfpmath=387 -ffast-math -fno-math-errno
+CFLAGS_BASE = -Wall -Wextra -mno-sse -mfpmath=387 -ffast-math -fno-math-errno -DWINDOW_TITLE='"$(PROJECT_NAME)"'
 ASMFLAGS_BASE =
 
 # Debug mode (set DEBUG=1 to enable)
@@ -161,6 +173,15 @@ ifeq ($(SKIP_CHECK_INPUT),1)
 endif
 ifeq ($(RETURN_TO_DOS),1)
     ASMFLAGS_OPTIONS += -DRETURN_TO_DOS
+endif
+
+# PCM playback (opt-in, so demos without it link and assemble nothing extra)
+PCM_PLAYBACK ?= 0
+
+ifeq ($(PCM_PLAYBACK),1)
+    CFLAGS_EXTRA += -DPCM_PLAYBACK
+    ASMFLAGS_OPTIONS += -DPCM_PLAYBACK
+    SDL_PCM_OBJ = $(SDL_PCM_SRC)
 endif
 
 # Platform-specific flags
@@ -233,9 +254,9 @@ endif
 .PHONY: linux
 linux: $(LINUX_OUT)
 
-$(LINUX_OUT): $(MAIN_C) $(RUNTIME_SRC) $(SDL_SRC) $(M32_OBJ_LINUX) | $(BIN_DIR)
+$(LINUX_OUT): $(MAIN_C) $(RUNTIME_SRC) $(SDL_SRC) $(SDL_PCM_OBJ) $(M32_OBJ_LINUX) | $(BIN_DIR)
 	@echo "$(COLOR_BLUE)==> Building for Linux (SDL2)$(COLOR_RESET)"
-	$(CC_LINUX) $(CFLAGS_LINUX) -o $@ $(MAIN_C) $(RUNTIME_SRC) $(SDL_SRC) $(M32_OBJ_LINUX) $(LDFLAGS_LINUX)
+	$(CC_LINUX) $(CFLAGS_LINUX) -o $@ $(MAIN_C) $(RUNTIME_SRC) $(SDL_SRC) $(SDL_PCM_OBJ) $(M32_OBJ_LINUX) $(LDFLAGS_LINUX)
 	@echo "$(COLOR_GREEN)Linux build complete: $(LINUX_OUT)$(COLOR_RESET)"
 	@echo
 
@@ -243,9 +264,9 @@ $(LINUX_OUT): $(MAIN_C) $(RUNTIME_SRC) $(SDL_SRC) $(M32_OBJ_LINUX) | $(BIN_DIR)
 .PHONY: windows
 windows: $(WINDOWS_OUT)
 
-$(WINDOWS_OUT): $(MAIN_C) $(RUNTIME_SRC) $(SDL_SRC) $(M32_OBJ_WINDOWS) | $(BIN_DIR)
+$(WINDOWS_OUT): $(MAIN_C) $(RUNTIME_SRC) $(SDL_SRC) $(SDL_PCM_OBJ) $(M32_OBJ_WINDOWS) | $(BIN_DIR)
 	@echo "$(COLOR_CYAN)==> Building for Windows (MinGW32 + SDL2)$(COLOR_RESET)"
-	$(CC_WINDOWS) $(CFLAGS_WINDOWS) -o $@ $(MAIN_C) $(RUNTIME_SRC) $(SDL_SRC) $(M32_OBJ_WINDOWS) $(LDFLAGS_WINDOWS)
+	$(CC_WINDOWS) $(CFLAGS_WINDOWS) -o $@ $(MAIN_C) $(RUNTIME_SRC) $(SDL_SRC) $(SDL_PCM_OBJ) $(M32_OBJ_WINDOWS) $(LDFLAGS_WINDOWS)
 	@echo "$(COLOR_GREEN)Windows build complete: $(WINDOWS_OUT)$(COLOR_RESET)"
 	@echo
 
@@ -274,7 +295,6 @@ com: $(COM_OUT)
 $(COM_OUT): $(MAIN_ASM) | $(BIN_DIR)
 	@echo "$(COLOR_YELLOW)==> Building COM file$(COLOR_RESET)"
 	$(ASM) $(ASMFLAGS_COM) $< -o $@ -l $(BIN_DIR)/$(LST_OUT)
-	#@if [ -x "$(SHOW_SIZES)" ]
 	@echo "$(COLOR_GREEN)COM build complete: $(COM_OUT) ($$(stat -c%s $@ 2>/dev/null || stat -f%z $@) bytes)$(COLOR_RESET)"
 	@echo "$(COLOR_BOLD)Listing: $(BIN_DIR)/$(LST_OUT)$(COLOR_RESET)"
 	@echo
@@ -288,7 +308,7 @@ endif
 .PHONY: sizes
 sizes:
 ifdef MAIN_ASM
-	#@if [ -x "$(SHOW_SIZES)" ]; then \
+	@if [ -x "$(SHOW_SIZES)" ]; then \
 		$(SHOW_SIZES) $(BIN_DIR)/$(LST_OUT); \
 	else \
 		echo "show-sizes.sh script not found"; \
@@ -308,7 +328,8 @@ code:
 		--input $(MAIN_ASM) \
 		--output $(FLATTENED_ASM) \
 		--inline-macros $(FLATTEN_MACROS) \
-		--optional-labels $(FLATTEN_OPTIONAL_LABELS)
+		--optional-labels $(FLATTEN_OPTIONAL_LABELS) \
+		--defines $(FLATTEN_DEFINES)
 	@echo
 
 # Run platform-specific build
@@ -355,6 +376,7 @@ endif
 	@echo "  make DEBUG=1 all        - Build with debug symbols"
 	@echo ""
 	@echo "Framework flags:"
+	@echo "  make PCM_PLAYBACK=1 linux - Play pcm_buffer through the host sound device"
 	@echo "  make NO_VSYNC=1 com     - Disable VSYNC waiting (faster, may tear)"
 	@echo "  make SKIP_CHECK_INPUT=1 com - Skip keyboard check (infinite loop)"
 	@echo "  make RETURN_TO_DOS=1 com - Enable clean DOS exit (costs bytes)"

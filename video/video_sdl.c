@@ -3,6 +3,10 @@
 #include <string.h>
 #include "video.h"
 
+#ifndef WINDOW_TITLE
+#define WINDOW_TITLE "TinyWork"
+#endif
+
 extern unsigned char palette_data[768];
 
 static SDL_Window *window = NULL;
@@ -25,7 +29,7 @@ int video_init(void) {
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengl");
 
     window = SDL_CreateWindow(
-        "Spirward",
+        WINDOW_TITLE,
         SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED,
         SCREEN_WIDTH * SDL_SCALER,

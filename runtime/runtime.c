@@ -1,5 +1,8 @@
 #include "runtime.h"
 #include "../video/video.h"
+#if defined(PCM_PLAYBACK) && !defined(__DJGPP__)
+#include "../audio/pcm.h"
+#endif
 
 #ifdef __DJGPP__
 #include <conio.h>
@@ -10,6 +13,9 @@
 
 static void render_frame(void) {
     frame();
+#if defined(PCM_PLAYBACK) && !defined(__DJGPP__)
+    pcm_submit(pcm_buffer);
+#endif
     video_update_from_buffer(image);
     video_present();
 }
@@ -81,7 +87,11 @@ void run(void) {
         }
 
         render_frame();
+#ifdef PCM_PLAYBACK
+        pcm_sync();
+#else
         SDL_Delay(16);
+#endif
     }
 #endif
 }
