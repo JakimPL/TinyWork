@@ -123,6 +123,11 @@ ASMINCLUDE_OPTIONS = -I$(TINYWORK_DIR) -I$(SOURCE_DIR)
 # make is told about them here or an edit to a source file rebuilds nothing.
 ASM_INCLUDED_SOURCES = $(wildcard $(SOURCE_DIR)/*.asm) $(wildcard $(TINYWORK_DIR)/tiny/*.asm)
 
+# The assembly options a build ran with. They arrive on the command line, where make sees no
+# timestamp to compare, so they are kept in a file: changing PIXEL_STEP or any other option
+# rewrites the stamp and rebuilds what it feeds, while an unchanged one leaves the build alone.
+ASM_FLAGS_STAMP = $(BUILD_DIR)/asmflags
+
 # Scripts
 SHOW_SIZES = $(TINYWORK_DIR)/scripts/show-sizes.sh
 FLATTEN_ASM = $(TINYWORK_DIR)/scripts/flatten_asm.py
@@ -230,6 +235,15 @@ all-targets: clean linux windows dos com
 $(BIN_DIR):
 	@mkdir -p $(BIN_DIR)
 
+$(BUILD_DIR):
+	@mkdir -p $(BUILD_DIR)
+
+$(ASM_FLAGS_STAMP): FORCE | $(BUILD_DIR)
+	@printf '%s\n' '$(ASMFLAGS_OPTIONS)' | cmp -s - $@ || printf '%s\n' '$(ASMFLAGS_OPTIONS)' > $@
+
+.PHONY: FORCE
+FORCE: ;
+
 $(LINUX_BUILD):
 	@mkdir -p $(LINUX_BUILD)
 
@@ -241,15 +255,15 @@ $(DOS_BUILD):
 
 # Assembly object file rules (only if M32_SRC is defined)
 ifdef M32_SRC
-$(M32_OBJ_LINUX): $(M32_SRC) $(ASM_INCLUDED_SOURCES) | $(LINUX_BUILD)
+$(M32_OBJ_LINUX): $(M32_SRC) $(ASM_INCLUDED_SOURCES) $(ASM_FLAGS_STAMP) | $(LINUX_BUILD)
 	@echo "$(COLOR_BOLD)Assembling $(M32_SRC) for Linux...$(COLOR_RESET)"
 	$(ASM) $(ASMFLAGS_LINUX) -o $@ $<
 
-$(M32_OBJ_WINDOWS): $(M32_SRC) $(ASM_INCLUDED_SOURCES) | $(WINDOWS_BUILD)
+$(M32_OBJ_WINDOWS): $(M32_SRC) $(ASM_INCLUDED_SOURCES) $(ASM_FLAGS_STAMP) | $(WINDOWS_BUILD)
 	@echo "$(COLOR_BOLD)Assembling $(M32_SRC) for Windows...$(COLOR_RESET)"
 	$(ASM) $(ASMFLAGS_WINDOWS) -o $@ $<
 
-$(M32_OBJ_DOS): $(M32_SRC) $(ASM_INCLUDED_SOURCES) | $(DOS_BUILD)
+$(M32_OBJ_DOS): $(M32_SRC) $(ASM_INCLUDED_SOURCES) $(ASM_FLAGS_STAMP) | $(DOS_BUILD)
 	@echo "$(COLOR_BOLD)Assembling $(M32_SRC) for DOS...$(COLOR_RESET)"
 	$(ASM) $(ASMFLAGS_DOS) -o $@ $<
 endif
@@ -296,7 +310,7 @@ ifdef MAIN_ASM
 .PHONY: com
 com: $(COM_OUT)
 
-$(COM_OUT): $(MAIN_ASM) $(ASM_INCLUDED_SOURCES) | $(BIN_DIR)
+$(COM_OUT): $(MAIN_ASM) $(ASM_INCLUDED_SOURCES) $(ASM_FLAGS_STAMP) | $(BIN_DIR)
 	@echo "$(COLOR_YELLOW)==> Building COM file$(COLOR_RESET)"
 	$(ASM) $(ASMFLAGS_COM) $< -o $@ -l $(BIN_DIR)/$(LST_OUT)
 	@echo "$(COLOR_GREEN)COM build complete: $(COM_OUT) ($$(stat -c%s $@ 2>/dev/null || stat -f%z $@) bytes)$(COLOR_RESET)"
